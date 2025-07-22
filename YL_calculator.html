@@ -1,0 +1,141 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <title>上海养老金预估（支持已缴+计划年限）</title>
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <style>
+    body { font-family: "微软雅黑", Arial, sans-serif; margin:24px auto; max-width:480px; background:#f8fafc;}
+    .block { background:#fff; margin:20px 0 32px 0; padding:20px 16px 12px 16px; border-radius:8px; box-shadow: 0 0 6px #eee;}
+    h2 { color:#3b66c2;}
+    label {font-weight:bold; display:block;margin:12px 0 4px 0;}
+    input[type=number] {width:100px; padding:3px 5px;}
+    .tip {color:#666;font-size:12px;}
+    .sum {color:#f66; font-size: 20px; font-weight:bold;}
+    .result {margin-top:20px;padding-top:12px;border-top:1px dashed #ccc;}
+    .flex {display:flex;align-items:center;}
+    .small {font-size:13px; color:#999;}
+  </style>
+</head>
+<body>
+  <h2>YLJ预估</h2>
+  <div class="block">
+    <form id="form">
+
+      <label>已缴纳年限（年）</label>
+      <input type="number" id="years_done" value="8" min="0" max="50" required>
+      <span class="tip">（你已实际参保、缴纳社保的年份）</span>
+
+      <label>还计划缴纳年限（年）</label>
+      <input type="number" id="years_plan" value="22" min="0" max="50">
+      <span class="tip">（你计划继续缴纳到退休的年数）</span>
+
+      <label>本人缴费指数</label>
+      <input type="number" id="index" value="1.2" min="0.6" max="3" step="0.01">
+      <span class="tip">（工资/社平工资，1 = 社平，1.2 = 高20%）</span>
+
+      <label>退休年龄</label>
+      <select id="age">
+        <option value="60" selected>60岁（男）</option>
+        <option value="55">55岁（女干部）</option>
+        <option value="50">50岁（女工人）</option>
+      </select>
+      <span class="tip">(影响“计发月数”)</span>
+
+      <label>上年社会平均工资（元）</label>
+      <input type="number" id="avg" value="11396">
+      <span class="tip">(2024年上海默认)</span>
+
+      <label>已缴纳个人账户累计金额（元）</label>
+      <input type="number" id="acc_done" value="65000" min="0" step="1000">
+      <span class="tip">(社保APP可查，如不清楚可保留或按估算)</span>
+
+      <div class="small" style="margin:10px 0 8px 0;">系统将自动预估【未来缴纳年限】所增加的个人账户金额</div>
+
+      <div style="margin-top:20px;">
+        <button type="submit" style="font-size:16px;padding:7px 32px;background:#3486cc; color:#fff; border:none; border-radius:5px;">计算</button>
+      </div>
+    </form>
+    <div class="result" id="result"></div>
+  </div>
+<script>
+// 退休计发月数表（国家规定）
+const monthTable = { "50":195, "55":170, "60":139 };
+
+// 预估个人账户每年新增 = 工资 * 8% * 12
+// 工资按 (缴费指数 * 社平工资) 预估
+function forecastPension({
+  years_done, years_plan, index, avg, age, acc_done
+}) {
+  // 必须全部数字
+  years_done = Number(years_done)||0;
+  years_plan = Number(years_plan)||0;
+  index = Number(index)||1;
+  avg = Number(avg)||0;
+  acc_done = Number(acc_done)||0;
+  const YEAR = years_done + years_plan;
+  // 个人账户累计预测
+  // 已缴纳部分直接用已知
+  // 还计划部分：预估工资按指数×社平，按8%记入个人账户
+  const salary = index * avg;
+  const acc_plan = years_plan * salary * 0.08 * 12;
+  const acc_sum = acc_done + acc_plan;
+
+  // 本人工资个人指数化月平均
+  // 假定全程缴费指数不变（更严谨可做分段）
+  const indexAvg = salary;
+
+  // 基础养老金
+  const basePension = ((avg + indexAvg)/2) * 0.2;
+
+  // 个人账户养老金
+  const mMonth = monthTable[age] || 139;
+  const personalPension = acc_sum / mMonth;
+
+  // 总养老金
+  return {
+    base: basePension,
+    personal: personalPension,
+    total: basePension + personalPension,
+    acc_sum, acc_plan, mMonth, YEAR
+  };
+}
+
+function showResult(res){
+  document.getElementById('result').innerHTML = `
+    <div>
+      <b>预估YLJ（月）：<span class="sum">${res.total.toFixed(2)} 元</span></b>
+      <div class="small">= 基础 ${res.base.toFixed(2)} + 个人账户 ${res.personal.toFixed(2)} 元</div>
+      <div class="small" style="margin-top:5px;">
+        个人账户累计： <b>${res.acc_sum.toFixed(2)}</b> 元（其中未来计划部分约 <b>${res.acc_plan.toFixed(2)}</b> 元） <br>
+        退休累计总缴费年限： <b>${res.YEAR}</b> 年 <br>
+        养老金计发月数： <b>${res.mMonth}</b>
+      </div>
+    </div>
+    <div class="small" style="margin-top:10px;line-height:1.7;">
+    说明：<br>
+      1、本工具按上海2024方案，个人账户累计未来部分基于薪资档次和社平假设，实际金额与今后缴费工资变化和政策调整有关；<br>
+      2、最终养老金以社保官方结算为准；<br>
+      3、退休年龄与性别、岗位有关。计发月数越少养老金越高（反之亦然）；<br>
+      4、如有视同缴费年限（92年前参保）或特殊情况，仅供参考。
+    </div>
+  `;
+}
+
+document.getElementById('form').onsubmit = function(e){
+  e.preventDefault();
+  const years_done = document.getElementById("years_done").value;
+  const years_plan = document.getElementById("years_plan").value;
+  const index = document.getElementById("index").value;
+  const age = document.getElementById("age").value;
+  const avg = document.getElementById("avg").value;
+  const acc_done = document.getElementById("acc_done").value;
+  const res = forecastPension({years_done, years_plan, index, avg, age, acc_done});
+  showResult(res);
+};
+// 默认自动算一次
+setTimeout(()=>{ document.getElementById('form').dispatchEvent(new Event('submit')); },120);
+
+</script>
+</body>
+</html>

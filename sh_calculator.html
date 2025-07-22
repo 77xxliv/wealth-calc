@@ -1,0 +1,234 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <title>SH计算器</title>
+  <meta name="viewport" content="width=device-width,initial-scale=1.0">
+  <style>
+    body { font-family: "微软雅黑", Arial, sans-serif; margin: 24px auto; max-width: 520px; background: #f7f7fa; }
+    h2   { color: #309; }
+    .block { background: #fff; padding: 22px 16px 12px 16px; margin: 16px 0 30px 0; border-radius: 8px; box-shadow: 0 0 6px #eee;}
+    label {display:block;margin:12px 0 4px 0; font-weight: bold;}
+    input[type=number] { width: 110px; padding: 3px 5px; }
+    select { margin-left: 5px; }
+    .tip {color: #888; font-size: 12px;}
+    .result { margin-top: 16px; padding: 10px 0 0 0; border-top: 1px dashed #cacaca;}
+    .sum {font-size:18px; color:#e8711f; font-weight:bold;}
+    .small {font-size:13px;}
+    .inline-flex { display: flex; align-items: center;}
+  </style>
+</head>
+<body>
+  <h2>SH计算器 <span style="font-size:0.6em;color:#665;">2024上海</span></h2>
+  <div class="block">
+    <form id="form" autocomplete="off">
+      <label>月工资（税前） <span class="tip">元</span></label>
+      <input type="number" name="salary" id="salary" value="17000" required>
+      
+      <label style="margin-bottom:4px;">五险一金</label>
+      <div class="inline-flex">
+        <input type="number" step="0.01" name="insurance" id="insurance" value="0" style="margin-right:10px;">
+        <button id="auto_ins" type="button" style="padding:2px 10px;font-size:13px;line-height:20px; margin-right:8px;">自动</button>
+        <span class="tip" id="ins_auto_tip">系统自动根据工资、政策计算</span>
+      </div>
+      <div style="margin-bottom:2px;">
+        <span class="tip" id="ins_rule_tip">
+          2024基数7200~36100，公积金12%，社保合计10.5%
+        </span>
+      </div>
+      
+      <label>月专项附加扣除 <span class="tip">（元，子女教育、房贷等）</span></label>
+      <input type="number" name="special" id="special" value="2000">
+      
+      <label>年终奖 <span class="tip">（税前，元）</span></label>
+      <input type="number" name="bonus" id="bonus" value="30000" min="0">
+      
+      <label>年终奖计税方式
+        <select id="bonus_mode">
+          <option value="alone">单独计税</option>
+          <option value="merge">并入工资计税</option>
+        </select>
+      </label>
+
+      <div style="margin-top:24px;">
+        <button type="submit" style="padding:8px 32px; font-size:16px;background:#309;color:#fff; border:none; border-radius:5px">计算</button>
+      </div>
+    </form>
+    <div class="result" id="result"></div>
+  </div>
+<script>
+/**
+ * 五险一金自动计算规则（上海2024，基于上海市人社局/公积金2024标准）： 
+ * 社保基数下限7200元，上限36100元，社保比例10.5%；公积金个人12%，基数同上下限。
+ */
+function calcInsuranceAuto(salary) {
+  // 2024上海社保/公积金基数上下限，单位元（每月）
+  const minBase = 7200, maxBase = 36100;
+  // 各项比例，个人部分
+  const pension = 0.08, medical = 0.02, injury = 0.00, maternity = 0.00, unemployment = 0.005;
+  const housefund = 0.12;
+  // 基数限定
+  let base = Math.max(minBase, Math.min(salary, maxBase));
+  // 社保个人合计（养老、医疗、失业）
+  let social = base * (pension + medical + unemployment);
+  // 公积金
+  let house = base * housefund;
+  // 总额
+  let total = social + house;
+  return {
+    base: base,
+    social: social,
+    house: house,
+    total: total
+  };
+}
+
+// 个税速算表：2024年，月表
+const monthTable = [
+  { up: 3000, rate: 0.03, quick: 0 },
+  { up: 12000, rate: 0.10, quick: 210 },
+  { up: 25000, rate: 0.20, quick: 1410 },
+  { up: 35000, rate: 0.25, quick: 2660 },
+  { up: 55000, rate: 0.30, quick: 4410 },
+  { up: 80000, rate: 0.35, quick: 7160 },
+  { up: Infinity, rate: 0.45, quick: 15160 }
+];
+const yearTable = [
+  { up: 36000, rate: 0.03, quick: 0 },
+  { up: 144000, rate: 0.10, quick: 2520 },
+  { up: 300000, rate: 0.20, quick: 16920 },
+  { up: 420000, rate: 0.25, quick: 31920 },
+  { up: 660000, rate: 0.30, quick: 52920 },
+  { up: 960000, rate: 0.35, quick: 85920 },
+  { up: Infinity, rate: 0.45, quick: 181920 }
+];
+function getTable(taxable, table) {
+  for (let b of table) if (taxable <= b.up) return b;
+}
+// 单月工资税
+function calcMonthTax(s, insurance, special) {
+  const base = s - insurance - special - 5000;
+  if (base <= 0) return {tax:0, rate:0, quick:0, taxable:0};
+  const b = getTable(base, monthTable);
+  return { 
+    tax: base * b.rate - b.quick,
+    rate: b.rate,
+    quick: b.quick,
+    taxable:base
+  };
+}
+// 年终奖单独计税
+function calcBonusTax(bonus) {
+  if (bonus<=0) return {tax:0, rate:0, quick:0, avg:0};
+  const avg = bonus/12;
+  const b = getTable(avg, monthTable);
+  return {
+    tax: bonus * b.rate - b.quick,
+    rate: b.rate,
+    quick: b.quick,
+    avg
+  }
+}
+// 并入计税
+function calcMergeAll(s, insurance, special, bonus) {
+  // 全年工资+五险一金专项等并入后一次计税
+  const total_income = s*12 + bonus;
+  const total_deduct = (insurance+special+5000)*12;
+  const taxable = total_income - total_deduct;
+  if (taxable <= 0) return {tax:0, rate:0, quick:0, taxable:0};
+  const b = getTable(taxable, yearTable);
+  return {
+    tax: taxable * b.rate - b.quick,
+    rate: b.rate,
+    quick: b.quick,
+    taxable,
+  }
+}
+function f2(x) {return Number(x||0).toFixed(2);}
+let auto_ins_last = 0;
+// 自动五险一金填充
+function setInsuranceAuto() {
+  const salary = +document.getElementById("salary").value;
+  const ins = calcInsuranceAuto(salary);
+  document.getElementById("insurance").value = f2(ins.total);
+  document.getElementById("ins_auto_tip").innerText = "已自动根据 "+f2(ins.base)+" 元基数计算（可手动改）";
+  document.getElementById("ins_rule_tip").innerText =
+    "基数："+f2(ins.base)+"，社保"+f2(ins.social)+"，公积金"+f2(ins.house);
+  auto_ins_last = ins.total;
+}
+// 页面初始化
+setTimeout(()=>{
+  setInsuranceAuto();
+},80);
+
+document.getElementById("auto_ins").onclick = function(e) {
+  setInsuranceAuto();
+  document.getElementById("insurance").focus();
+  document.getElementById("insurance").select();
+};
+
+let last_input_auto = false;
+document.getElementById("insurance").addEventListener('input', function(){
+  // 如用户手动修改，与自动值不符则视为手动
+  let manual = Math.abs(this.value - auto_ins_last) > 0.01;
+  document.getElementById("ins_auto_tip").innerText = manual ? 
+    "已手动校正（如需重置请点『自动』）" : 
+    "已自动根据 "+f2(calcInsuranceAuto(+document.getElementById("salary").value).base)+" 元基数计算（可手动改）";
+});
+// 若工资改动，则如五险一金是自动状态，则实时自动同步计算
+document.getElementById("salary").addEventListener('input', function(){
+  // 如果当前保险值与自动值相符则随动，否则不自动覆盖
+  let currentAuto = Math.abs(document.getElementById("insurance").value - auto_ins_last) < 0.01;
+  if (currentAuto) setInsuranceAuto();
+});
+
+document.getElementById('form').addEventListener('submit', function(e){
+  e.preventDefault();
+  const salary = +document.getElementById("salary").value;
+  const insurance = +document.getElementById("insurance").value;
+  const special = +document.getElementById("special").value;
+  const bonus = +document.getElementById("bonus").value;
+  const mode = document.getElementById("bonus_mode").value;
+  // 月度税
+  const m = calcMonthTax(salary, insurance, special);
+  const after = salary - insurance - m.tax;
+  // 年终奖税
+  let bonusTax=0, bRate=0, bQuick=0, bAvg=0;
+  let mergeTip = "";
+  if (bonus>0) {
+    if (mode==="alone") {
+      const b = calcBonusTax(bonus);
+      bonusTax = b.tax;
+      bRate = b.rate;
+      bQuick = b.quick;
+      bAvg = b.avg;
+    } else {
+      // 并入工资
+      const all = calcMergeAll(salary, insurance, special, bonus);
+      const wageYear = calcMergeAll(salary, insurance, special, 0);
+      bonusTax = all.tax - wageYear.tax;
+      bRate = all.rate;
+      bQuick = all.quick;
+      mergeTip = `<div class="small">年终奖已合并全年综合计税，年化税率 ${(bRate*100).toFixed(0)}%</div>`;
+    }
+  }
+  // 输出
+  document.getElementById('result').innerHTML = `
+    <div><b>每月税后工资：</b> <span class="sum">${f2(after)} 元</span>
+      <span class="small">（月个税 ${f2(m.tax)} 元，五险一金 ${f2(insurance)} 元）</span>
+    </div>
+    <div><b>年终奖到手：</b> <span class="sum">${f2(bonus - bonusTax)} 元</span>
+      <span class="small">（税 ${f2(bonusTax)} 元, 税前${f2(bonus)}，${mode==='alone'?'单独计税':'并入工资计税'}${mode==='alone'?('，对应税率'+(bRate*100).toFixed(0)+'%'):''}）</span>
+      ${mergeTip}
+    </div>
+    <div style="margin:14px 0 0 0;"><b>全年总到手：</b> <span class="sum">${f2(after*12 + bonus - bonusTax)} 元</span></div>
+    <div class="tip" style="margin-top:8px;">仅供交流，详细社保公积金比例及专项扣除请核查官方。如遇税率/政策变化，请以最新公告为准。</div>
+  `;
+});
+// 初始化
+setTimeout(()=>{
+  document.getElementById("form").dispatchEvent(new Event("submit"));
+},150);
+</script>
+</body>
+</html>

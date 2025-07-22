@@ -1,0 +1,103 @@
+<!DOCTYPE html>
+<html lang="zh">
+<head>
+  <meta charset="UTF-8">
+  <title>上海住房公积金累积计算器（含利息）</title>
+  <style>
+    body { font-family: 微软雅黑, Arial, sans-serif; background: #f9f9fb; padding: 30px;}
+    .container { max-width: 430px; background: #fff; padding: 24px; border-radius: 9px; box-shadow: 0 0 12px #d7d7d7; margin: auto;}
+    label { display: block; margin: 15px 0 5px 0;}
+    input[type="number"] { width: 100%; padding: 7px; font-size: 15px;}
+    .small { font-size: 13px; color: #999;}
+    .group { background: #f1f3fa; padding: 10px 12px 8px 12px; margin-bottom: 10px; border-radius: 6px;}
+    .result { margin-top: 25px; color: #0745a5; font-size: 20px; font-weight: bold;}
+    button { margin-top: 17px; width: 100%; padding: 9px 0; font-size: 16px; background: #2762ff; color: #fff; border: none; border-radius: 4px;}
+  </style>
+</head>
+<body>
+<div class="container">
+  <h2>GJJ计算器 <span style="font-size:15px; color:#36a">（含年利息复利1.5%）</span></h2>
+  <div class="group">
+    <label>缴纳方式：</label>
+    <label><input type="radio" name="mode" value="auto" checked onchange="updateMode()"> 按工资比例自动计算</label>
+    <label class="small" style="margin-left:20px;">（输入工资和比例，系统算月缴额）</label>
+    <div id="auto_inputs">
+      <label>月工资（元）：</label>
+      <input type="number" id="salary" value="10000">
+      <label>个人比例（%）：</label>
+      <input type="number" id="personal_rate" value="7">
+      <label>单位比例（%）：</label>
+      <input type="number" id="company_rate" value="7">
+    </div>
+    <label><input type="radio" name="mode" value="manual" onchange="updateMode()"> 直接输入月缴纳额</label>
+    <div class="small" style="margin-left:20px;">（无需工资比例参数）</div>
+    <div id="manual_input" style="display:none;">
+      <label>月缴纳额（元）：</label>
+      <input type="number" id="manual_month" value="" placeholder="如 1600">
+    </div>
+  </div>
+  <label>缴纳年数：</label>
+  <input type="number" id="years" value="5" min="1" max="50">
+  
+  <label>账户当前余额（元）：</label>
+  <input type="number" id="balance" value="0">
+  
+  <div class="small" style="margin:8px 0 0 0;">年利率：<b>1.5%</b>（上海2023-2024现行基准）</div>
+  
+  <button onclick="computeTotal()">计算累计总额（含复利利息）</button>
+
+  <div class="result" id="result"></div>
+</div>
+
+<script>
+function updateMode() {
+  var auto = document.querySelector('input[name="mode"]:checked').value === "auto";
+  document.getElementById('auto_inputs').style.display = auto ? '' : 'none';
+  document.getElementById('manual_input').style.display = auto ? 'none' : '';
+}
+function getMonthAmount() {
+  var mode = document.querySelector('input[name="mode"]:checked').value;
+  if (mode === "auto") {
+    var salary = parseFloat(document.getElementById('salary').value);
+    var p_rate = parseFloat(document.getElementById('personal_rate').value) / 100;
+    var c_rate = parseFloat(document.getElementById('company_rate').value) / 100;
+    if (isNaN(salary) || isNaN(p_rate) || isNaN(c_rate)) return NaN;
+    return salary * (p_rate + c_rate);
+  } else {
+    var amt = parseFloat(document.getElementById('manual_month').value);
+    return amt;
+  }
+}
+// 年复利总额公式
+function computeTotal() {
+  var month_amt = getMonthAmount();
+  var years = parseFloat(document.getElementById('years').value);
+  var balance = parseFloat(document.getElementById('balance').value);
+
+  // 固定年利率（2023-2024上海基准：1.5%）
+  var rate = 0.015;
+
+  if (isNaN(month_amt) || month_amt <= 0) {
+    document.getElementById('result').innerHTML = '请填写有效的月缴纳额信息';
+    return;
+  }
+  if (isNaN(years) || years <= 0) {
+    document.getElementById('result').innerHTML = '请输入合理的缴纳年数';
+    return;
+  }
+  if (isNaN(balance) || balance < 0) balance = 0;
+
+  var months = years * 12;
+
+  // 公式：S = B × (1+r)^n + M × 12 × [(1+r)^n - 1] / r
+  var total = balance * Math.pow(1 + rate, years) + month_amt * 12 * (Math.pow(1 + rate, years) - 1) / rate;
+  var paid_total = month_amt * months;
+  var interest = total - (balance + paid_total);
+
+  document.getElementById('result').innerHTML =
+    `最终账户累计金额：<span style="color:#007d49">${total.toFixed(2)}</span> 元<br>
+    其中当前余额：${balance.toFixed(2)} 元，期间缴纳：${paid_total.toFixed(2)} 元，累计利息：<span style="color:#c95600">${interest.toFixed(2)}</span> 元`;
+}
+</script>
+</body>
+</html>
