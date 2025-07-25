@@ -64,18 +64,19 @@
 <body>
     <div class="container">
         <h1>工具导航</h1>
-        <ul id="tools-list">
-            <!-- 动态生成工具列表 -->
-        </ul>
+        <ul id="tools-list"></ul>
         <div class="footer">
             © 2024 Powered by GitHub Pages
         </div>
     </div>
     <script>
+    // 清理可能的重复项
+    const ul = document.getElementById('tools-list');
+    ul.innerHTML = '';
+    // 动态加载工具列表
     fetch('tools.json?'+Date.now())
         .then(resp => resp.json())
         .then(tools => {
-            const ul = document.getElementById('tools-list');
             tools.forEach(tool => {
                 const li = document.createElement('li');
                 li.className = 'tool-item';
@@ -87,101 +88,7 @@
             });
         })
         .catch(err => {
-            document.getElementById('tools-list').innerHTML = '<li style="color:#c10">加载 tools.json 失败</li>';
-        });
-    </script>
-</body>
-</html>
-<!DOCTYPE html>
-<html lang="zh">
-<head>
-    <meta charset="UTF-8">
-    <title>工具导航</title>
-    <style>
-        body {
-            background: #f7f9fa;
-            font-family: "Helvetica Neue", Helvetica, Arial, "PingFang SC", "Microsoft YaHei", sans-serif;
-        }
-        .container {
-            max-width: 480px;
-            margin: 60px auto;
-            background: #fff;
-            border-radius: 10px;
-            box-shadow: 0 8px 24px rgba(0,0,0,0.08);
-            padding: 32px 24px;
-        }
-        h1 {
-            text-align: center;
-            color: #2667ff;
-            letter-spacing: 2px;
-            margin-bottom: 30px;
-        }
-        ul#tools-list {
-            list-style: none;
-            padding: 0;
-            margin: 0;
-        }
-        li.tool-item {
-            margin: 18px 0;
-            padding: 0 0 9px 0;
-            border-bottom: 1px solid #eee;
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-        }
-        a.tool-link {
-            font-size: 18px;
-            color: #2266bb;
-            font-weight: bold;
-            text-decoration: none;
-            transition: color .2s;
-        }
-        a.tool-link:hover {
-            color: #6897ff;
-        }
-        .version {
-            font-size: 13px;
-            color: #999;
-            background: #f4f4f6;
-            padding: 2px 8px;
-            border-radius: 6px;
-            margin-left: 16px;
-        }
-        .footer {
-            text-align: center;
-            margin: 36px 0 0 0;
-            font-size: 13px;
-            color: #bbb;
-        }
-    </style>
-</head>
-<body>
-    <div class="container">
-        <h1>工具导航</h1>
-        <ul id="tools-list">
-            <!-- 动态生成工具列表 -->
-        </ul>
-        <div class="footer">
-            © 2024 Powered by GitHub Pages
-        </div>
-    </div>
-    <script>
-    fetch('tools.json?'+Date.now())
-        .then(resp => resp.json())
-        .then(tools => {
-            const ul = document.getElementById('tools-list');
-            tools.forEach(tool => {
-                const li = document.createElement('li');
-                li.className = 'tool-item';
-                li.innerHTML = `
-                    <a class="tool-link" href="${tool.href}" target="_blank">${tool.name}</a>
-                    <span class="version">${tool.version}</span>
-                `;
-                ul.appendChild(li);
-            });
-        })
-        .catch(err => {
-            document.getElementById('tools-list').innerHTML = '<li style="color:#c10">加载 tools.json 失败</li>';
+            ul.innerHTML = '<li style="color:#c10">加载 tools.json 失败</li>';
         });
     </script>
 </body>
