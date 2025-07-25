@@ -25,13 +25,13 @@
   <div class="container">
     <h2>CWZY测算器</h2>
     <form id="ff">
+      <label>当前年龄（岁）</label>
+      <input id="cur_age" type="number" value="30" min="0" max="100">
+      <span class="tip">填你现在的实际年龄（整数/可大于18）</span>
+
       <label>当前存款（万元）</label>
       <input id="current" type="number" value="300" min="0" step="0.1">
       <span class="tip">现有可投资净资产</span>
-
-      <label>目标提前退休存款（万元）</label>
-      <input id="target" type="number" value="800" min="0" step="0.1">
-      <span class="tip">如目标5年后存够800万提前退休</span>
 
       <label>工作期间年均储蓄（万元/年）</label>
       <input id="annualsave" type="number" value="100" min="0" step="0.1">
@@ -53,14 +53,18 @@
       <input id="spend" type="number" value="30" min="1" step="0.1">
       <span class="tip">退休并包括领养老金之后的总生活成本</span>
 
-      <label>养老金开始领取年数</label>
-      <input id="pension_gap" type="number" value="20" min="0" max="50">
-      <span class="tip">退休X年后开始领取养老金（即多少年完全靠投资）</span>
+      <label>养老金开始领取年龄（岁）</label>
+      <input id="pension_start_age" type="number" value="60" min="40" max="75">
+      <span class="tip">直接填你预计开始领取养老金的年龄</span>
 
-      <label>养老金金额（月）</label>
+      <label>养老金金额（万元/月）</label>
       <input id="pension" type="number" value="1" min="0" step="0.01">
-      <span class="tip">2人合计每月（现值，可考虑后续通胀调增）</span>
+      <span class="tip">现值，可考虑后续通胀调增</span>
       
+      <label>养老金年增幅（%）</label>
+      <input id="pension_growth" type="number" value="4" min="0" max="10" step="0.1">
+      <span class="tip">参考：近年养老金增幅约3.6%~5%</span>
+
       <label>模拟支撑年数（退休到寿命）（年）</label>
       <input id="retireyears" type="number" value="40" min="10" max="60">
       <span class="tip">如从40岁起退休，假设80岁升仙，填40</span>
@@ -70,144 +74,134 @@
     <div class="result" id="result"></div>
   </div>
 <script>
+// 主模拟逻辑
 function simulateRetire({
-  current, target, annualsave, workyears, rate, inflation,
-  spend, pension_gap, pension, retireyears
+  cur_age,
+  current, annualsave, workyears, rate, inflation,
+  spend, pension_start_age, pension, pension_growth, retireyears
 }) {
-  // 换算单位
-  let listYear = [];
-  let assets = Number(current)*10000;        // 初始资产
-  let annualsaveW = Number(annualsave)*10000;// 年储蓄
-  let n_work = Number(workyears);            // 继续工作几年
-  let r = Number(rate)/100;                  // 投资年化收益率
-  let i = Number(inflation)/100;             // 通胀
-  let spendW = Number(spend)*10000;          // 退休后年开支
-  let p_gap = Number(pension_gap);           // 养老金开始领取时间
-  let pension_year = Number(pension)*10000*12; // 年养老金，万元/月转为元/年
-  let n_retire = Number(retireyears);           // 退休后要覆盖多少年
-
-  let retired = false;
-  let early_done = false;
-  let assets_peak = 0;
+  // 参数转数值
+  cur_age = Number(cur_age);
+  let assets = Number(current)*10000;         // 初始资产，元
+  let annualsaveW = Number(annualsave)*10000; // 年储蓄，元
+  let n_work = Number(workyears);             // 还要工作几年
+  let r = Number(rate)/100;                   // 投资年化收益率
+  let i = Number(inflation)/100;              // 通胀
+  let spendW = Number(spend)*10000;           // 退休后年开支
+  let pension_year = Number(pension)*10000*12;// 年养老金
+  let pension_g = Number(pension_growth)/100; // 养老金年增幅
+  let n_retire = Number(retireyears);         // 退休后需支撑的年数
+  let retire_start_age = cur_age + n_work;    // 实际退休年龄
+  let pension_start_age = Number(pension_start_age); // 养老金开始领取年龄
   let year = 0;
+  let assets_peak = 0;
   let history = [];
-  let totalSpend = 0, totalPension = 0, totalEarning = 0, shortfall=0;
-  
-  // 工作存钱阶段
-  for(;year<n_work;year++){
-    // 收益先算年初资产收益
+  let totalSpend = 0, totalPension = 0, shortfall=0;
+
+  // 工作阶段
+  for(; year < n_work; year++){
     assets *= (1 + r);
-    // 年储蓄注入
     assets += annualsaveW;
-    // 记录
     history.push({
-      year:year+1,
-      phase:'工作',
-      income:annualsaveW,
-      spend:0,
+      year: year+1,
+      phase: '工作',
+      age: cur_age + year,
+      income: annualsaveW,
+      spend: 0,
       spendAdj: 0,
       pension: 0,
       balance: assets
     });
-    if(assets/10000 >= target && !early_done){
-      // 可选：提前达标
-      early_done = true;
-      // 若允许，一到达目标资金就自动退休
-      // break; //如果只要提早退休, 打开此注释
-    }
     assets_peak = Math.max(assets_peak, assets);
   }
 
-  // 记退休年份
-  let retireAge = year;
   let retireStartAssets = assets;
 
-  // 退休后每年逐年模拟
-  for(let j=0;j<n_retire;j++){
-    // 先计资产收益
+  // 退休阶段
+  for(let j = 0; j < n_retire; j++){
     assets *= (1 + r);
-    // 年支出-变成年龄/年份可视化
-    let outflow = spendW * Math.pow(1+i, j); // 支出考虑通胀增长
+    let real_age = retire_start_age + j;   // 实际年龄
+    let outflow = spendW * Math.pow(1+i, j); // 通胀递增支出
     let inflow = 0;
-
-    // p_gap年后养老金开始流入
-    if(j>=p_gap){
-      inflow = pension_year * Math.pow(1+i, j-p_gap); // 养老金也按通胀调整增长
+    if(real_age >= pension_start_age){
+      let years_get_pension = real_age - pension_start_age;
+      inflow = pension_year * Math.pow(1+pension_g, years_get_pension);
     }
-    // 资产变化 = (资产+养老金-消费)
     assets += inflow - outflow;
-    // 累记
-    totalSpend += outflow;
-    totalPension += inflow;
-    assets_peak = Math.max(assets_peak, assets);
+    if (assets_peak < assets) assets_peak = assets;
 
-    let ydesc = `退休第${j+1}年`;
-    if(j+1==p_gap) ydesc+='（养老金开始）';
     history.push({
-      year:year+j+1,
-      phase:'退休',
-      income:inflow,
-      spend:outflow,
-      spendAdj: outflow/(Math.pow(1+i, j)), // 还原为现值参考
-      pension:inflow,
+      year: year+j+1,
+      phase: '退休',
+      age: real_age,
+      income: inflow,
+      spend: outflow,
+      spendAdj: outflow/(Math.pow(1+i, j)), // 还原现值
+      pension: inflow,
       balance: assets
     });
-    // 若某年资产为负，则记录短缺年份
-    if(assets<=0 && shortfall==0) shortfall = j+1;
-    if(assets<0) assets=0;
+
+    totalSpend += outflow;
+    totalPension += inflow;
+    if (assets<=0 && shortfall==0) shortfall = j+1;
+    if (assets<0) assets=0;
   }
 
   return {
-    reachTargetYears: year,
-    retireAge: retireAge,
-    retireStartAssets: retireStartAssets,
+    retireAge: retire_start_age, // 实际退休年龄
+    retireStartAssets,
     endAssets: assets,
     assets_peak,
     totalSpend,
     totalPension,
     shortfall,
-    history
+    history,
+    pension_start_age
   }
 }
 
-function showResult(r){
+// 结果展示
+function showResult(r, input){
   let html = '';
-  html += `<div>你计划工作 <b>${r.reachTargetYears}</b> 年后，累计存下 <b>${(r.retireStartAssets/10000).toFixed(1)}</b> 万元，提前退休。</div>`;
+  html += `<div>你计划在 <b>${r.retireAge}</b> 岁退休，时点累计存下 <b>${(r.retireStartAssets/10000).toFixed(1)}</b> 万元。</div>`;
   if(r.shortfall==0){
-    html += `<div class="success" style="margin:11px 0 3px 0;"><b>✓ 恭喜，这笔钱按设定参数可覆盖全期生活到${r.history[r.history.length-1].year}年，最终还能剩余 <b>${(r.endAssets/10000).toFixed(1)}</b> 万元！</b></div>`;
+    html += `<div class="success" style="margin:11px 0 3px 0;"><b>✓ 全期可支撑至${r.history[r.history.length-1].age}岁，并最终剩余 <b>${(r.endAssets/10000).toFixed(1)}</b> 万元！</b></div>`;
   }else{
-    html += `<div class="warn" style="margin:11px 0 3px 0;">✗ 资金将在第 <b>${r.shortfall}</b> 年（退休${r.shortfall==1?'首':'后'}年）耗尽！可考虑增加本金、减少支出或延迟退休。</div>`;
+    html += `<div class="warn" style="margin:11px 0 3px 0;">✗ 仅可持续到 <b>${r.retireAge+r.shortfall-1}</b> 岁（退休第${r.shortfall}年）资金耗尽！请考虑调节计划。</div>`;
   }
-  html += `<div class="small">【资金峰值】${(r.assets_peak/10000).toFixed(1)} 万元｜累计（名义）支出 ${(r.totalSpend/10000).toFixed(1)} 万元｜累计领养老金 ${(r.totalPension/10000).toFixed(1)} 万元</div>`;
-  html += `<details style="margin-top:20px;"><summary style="cursor:pointer;">逐年明细</summary><table><tr><th>年度</th><th>阶段</th><th>收入/养老金</th><th>花费</th><th>年终资产</th></tr>`;
+  html += `<div class="small">【峰值资产】${(r.assets_peak/10000).toFixed(1)} 万元｜累计支出 ${(r.totalSpend/10000).toFixed(1)} 万元｜累计养老金入账 ${(r.totalPension/10000).toFixed(1)} 万元</div>`;
+  html += `<details style="margin-top:20px;"><summary style="cursor:pointer;">逐年明细</summary><table><tr><th>年度</th><th>阶段</th><th>年龄</th><th>养老金/年收益</th><th>花费</th><th>年终资产</th></tr>`;
   for(const item of r.history){
-    html += `<tr><td>${item.year}</td><td>${item.phase}</td><td>${(item.income/10000).toFixed(1)}</td><td>${(item.spend/10000).toFixed(1)}</td><td>${(item.balance/10000).toFixed(2)}</td></tr>`;
+    html += `<tr><td>${item.year}</td><td>${item.phase}</td><td>${item.age}</td><td>${(item.income/10000).toFixed(1)}</td><td>${(item.spend/10000).toFixed(1)}</td><td>${(item.balance/10000).toFixed(2)}</td></tr>`;
   }
   html += `</table></details>`;
   html += `<div class="small" style="margin-top:10px;line-height:1.6">
-  计算说明：工作继续攒钱，退休后每年先扣通胀递增的生活费，再加养老金流入。支持模拟提前退休、延迟退休、养老金有断档期、收益率变动等结构！各栏均可试验调整。
-  <br>合适的收益率/风险组合：建议退休理财策略以“固收+低波指数”为主，兼顾现金流稳定与防通胀增值，必要时下调年支出或延长工作期保障充足安全边际！可用更长&更高通胀做压力测试。
+  计算说明：一切年龄相关节点，均以“当前实际年龄”为起点推算；养老金、支出、投资都模拟增长与复利。<br>
+  <b>养老金年增幅建议填 4% 左右</b>，低于通胀时实际购买力下降。投资收益/风险请量力而行，多用灵活组合多方案对比分析。
   </div>`;
   document.getElementById('result').innerHTML = html;
 }
+
 document.getElementById('ff').onsubmit = function(e){
   e.preventDefault();
   let vals = {
+    cur_age: document.getElementById('cur_age').value,
     current: document.getElementById('current').value,
-    target: document.getElementById('target').value,
     annualsave: document.getElementById('annualsave').value,
     workyears: document.getElementById('workyears').value,
     rate: document.getElementById('rate').value,
     inflation: document.getElementById('inflation').value,
     spend: document.getElementById('spend').value,
-    pension_gap: document.getElementById('pension_gap').value,
+    pension_start_age: document.getElementById('pension_start_age').value,
     pension: document.getElementById('pension').value,
+    pension_growth: document.getElementById('pension_growth').value,
     retireyears: document.getElementById('retireyears').value
   };
   let ret = simulateRetire(vals);
-  showResult(ret);
+  showResult(ret, vals);
 };
-// 默认自动出一次结果
+
+// 默认自动算一次
 setTimeout(()=>{document.getElementById('ff').dispatchEvent(new Event('submit'));},250);
 </script>
 </body>
