@@ -1,0 +1,22 @@
+[
+    {
+        "name": "CW_calculator",
+        "href": "CW_calculator.html",
+        "version": "v1.2"
+    },
+    {
+        "name": "YL_calculator",
+        "href": "YL_calculator.html",
+        "version": "v1.0"
+    },
+    {
+        "name": "gjj_calculator",
+        "href": "gjj_calculator.html",
+        "version": "v0.9"
+    },
+    {
+        "name": "sh_calculator",
+        "href": "sh_calculator.html",
+        "version": "v2.0"
+    }
+]
