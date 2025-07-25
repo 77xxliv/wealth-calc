@@ -1,21 +1,21 @@
 [
     {
-        "name": "CW_calculator",
+        "name": "FIRE计算器",
         "href": "CW_calculator.html",
         "version": "v1.2"
     },
     {
-        "name": "YL_calculator",
+        "name": "养老金预估",
         "href": "YL_calculator.html",
         "version": "v1.0"
     },
     {
-        "name": "gjj_calculator",
+        "name": "公积金计算",
         "href": "gjj_calculator.html",
         "version": "v0.9"
     },
     {
-        "name": "sh_calculator",
+        "name": "税后工资",
         "href": "sh_calculator.html",
         "version": "v2.0"
     }
