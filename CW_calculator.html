@@ -92,7 +92,7 @@ function simulateRetire({
   let pension_g = Number(pension_growth)/100; // 养老金年增幅
   let n_retire = Number(retireyears);         // 退休后需支撑的年数
   let retire_start_age = cur_age + n_work;    // 实际退休年龄
-  let pension_start_age = Number(pension_start_age); // 养老金开始领取年龄
+  let pension_start_age = Number(pension_start_age_raw); // 养老金开始领取年龄
   let year = 0;
   let assets_peak = 0;
   let history = [];
