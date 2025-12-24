@@ -9,7 +9,7 @@
             font-family: "Helvetica Neue", Helvetica, Arial, "PingFang SC", "Microsoft YaHei", sans-serif;
         }
         .container {
-            max-width: 480px;
+            max-width: 520px;
             margin: 60px auto;
             background: #fff;
             border-radius: 10px;
@@ -29,11 +29,8 @@
         }
         li.tool-item {
             margin: 18px 0;
-            padding: 0 0 9px 0;
+            padding-bottom: 12px;
             border-bottom: 1px solid #eee;
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
         }
         a.tool-link {
             font-size: 18px;
@@ -51,7 +48,13 @@
             background: #f4f4f6;
             padding: 2px 8px;
             border-radius: 6px;
-            margin-left: 16px;
+            margin-left: 12px;
+        }
+        .desc {
+            font-size: 14px;
+            color: #666;
+            margin-top: 6px;
+            line-height: 1.5;
         }
         .footer {
             text-align: center;
@@ -70,19 +73,20 @@
         </div>
     </div>
     <script>
-    // 清理可能的重复项
     const ul = document.getElementById('tools-list');
     ul.innerHTML = '';
-    // 动态加载工具列表
-    fetch('tools.json?'+Date.now())
+    fetch('tools.json?' + Date.now())
         .then(resp => resp.json())
         .then(tools => {
             tools.forEach(tool => {
                 const li = document.createElement('li');
                 li.className = 'tool-item';
                 li.innerHTML = `
-                    <a class="tool-link" href="${tool.href}" target="_blank">${tool.name}</a>
-                    <span class="version">${tool.version}</span>
+                    <div>
+                        <a class="tool-link" href="${tool.href}" target="_blank">${tool.name}</a>
+                        <span class="version">${tool.version}</span>
+                        ${tool.description ? `<div class="desc">${tool.description}</div>` : ''}
+                    </div>
                 `;
                 ul.appendChild(li);
             });
