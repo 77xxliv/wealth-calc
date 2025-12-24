@@ -1,76 +1,113 @@
 <!DOCTYPE html>
 <html lang="zh-CN">
 <head>
-  <meta charset="UTF-8">
-  <title>退休模拟器</title>
-  <meta name="viewport" content="width=device-width,initial-scale=1">
-  <style>
-    body { font-family: "微软雅黑",Arial,sans-serif; background:#faf7fa; margin:0; }
-    .container{max-width:540px;margin:34px auto;background:#fff;padding:28px 14px 17px;border-radius:12px; box-shadow:0 0 12px #eee;}
-    h2{color:#154;}
-    label{font-weight:700;display:block; margin:15px 0 4px 0;}
-    input{width:120px;padding:5px;}
-    .tip {color:#888;font-size:12px;}
-    .result{margin-top:26px;padding:16px 0 0 0; border-top:1px solid #dfd;}
-    .small{font-size:12.5px;color:#888;}
-    table{margin-top:13px;width:100%;border-collapse:collapse;}
-    th,td{border:1px solid #ddd;padding:3px 4px;}
-    th{background:#eee;}
-    .success{color:#4c8a03;}
-    .warn{color:#c55;}
-    button{font-size:15px;background:#3680d2; border:none;padding:7px 33px;color:#fff;border-radius:5px;margin-top:17px;}
-  </style>
+<meta charset="UTF-8">
+<title>退休模拟器</title>
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<style>
+body { font-family: "微软雅黑",Arial,sans-serif; background:#faf7fa; margin:0; }
+.container{max-width:540px;margin:34px auto;background:#fff;padding:28px 14px 17px;border-radius:12px; box-shadow:0 0 12px #eee;}
+h2{color:#154;}
+label{font-weight:700;display:block; margin:15px 0 4px 0;}
+input{width:120px;padding:5px;}
+.tip {color:#888;font-size:12px;}
+.result{margin-top:26px;padding:16px 0 0 0; border-top:1px solid #dfd;}
+.small{font-size:12.5px;color:#888;}
+table{margin-top:13px;width:100%;border-collapse:collapse;}
+th,td{border:1px solid #ddd;padding:3px 4px;}
+th{background:#eee;}
+.success{color:#4c8a03;}
+.warn{color:#c55;}
+button{font-size:15px;background:#3680d2; border:none;padding:7px 33px;color:#fff;border-radius:5px;margin-top:17px;}
+/* 魔法按钮样式 */
+#magic-btns {margin:14px 0 0 0;display:flex;flex-wrap:wrap;gap:8px;}
+.magic-btn {
+  background:#eaf7ff;
+  border:1px solid #aad;
+  color:#2850af;
+  font-size:13px;
+  border-radius:4px;
+  padding:4px 12px;
+  cursor:pointer;
+  transition:background 0.15s;
+}
+.magic-btn:hover { background:#d8f0ff; }
+.magic-tip { font-size:13px; color:#777; margin-bottom:5px; margin-top:10px; line-height:1.5; }
+#magic-tip-msg {
+  color:#1976d2;
+  font-size:13.5px;
+  line-height:1.5;
+  height: 24px;
+  min-height: 24px;
+  margin-top: 5px;
+  margin-bottom: 7px;
+  display: flex;
+  align-items: center;
+  transition:all .2s;
+}
+#magic-tip-msg:empty::after {
+  content: ' ';
+  visibility: hidden;
+  display: inline-block;
+  width:100%;
+  height: 18px;
+}
+</style>
 </head>
 <body>
-  <div class="container">
-    <h2>退休测算器</h2>
-    <form id="ff">
-      <label>当前年龄（岁）</label>
-      <input id="age_now" type="number" value="30" min="18" max="80">
-      <span class="tip">工作起点年龄</span>
+<div class="container">
+  <h2>退休测算器</h2>
+  <form id="ff">
+    <label>当前年龄（岁）</label>
+    <input id="age_now" type="number" value="30" min="18" max="80">
 
-      <label>预计退休年龄（岁）</label>
-      <input id="age_retire" type="number" value="40" min="18" max="100">
-      <span class="tip">想多少岁不工作，或试算一个目标</span>
+    <label>预计退休年龄（岁）</label>
+    <input id="age_retire" type="number" value="40" min="18" max="100">
 
-      <label>可领取养老金年龄（岁）</label>
-      <input id="age_pension" type="number" value="55" min="18" max="100">
-      <span class="tip">养老金账户可发放的年龄</span>
+    <label>可领取养老金年龄（岁）</label>
+    <input id="age_pension" type="number" value="55" min="18" max="100">
 
-      <label>当前存款（万元）</label>
-      <input id="current" type="number" value="50" min="0" step="0.1">
+    <label>当前存款（万元）</label>
+    <input id="current" type="number" value="50" min="0" step="0.1">
 
-      <label>工作期间年均储蓄（万元/年）</label>
-      <input id="annualsave" type="number" value="10" min="0" step="0.1">
+    <label>工作期间年均储蓄（万元/年）</label>
+    <input id="annualsave" type="number" value="10" min="0" step="0.1">
 
-      <label>理财年化收益率（%）</label>
-      <input id="rate" type="number" value="5" min="0" max="15" step="0.01">
+    <label>理财年化收益率（%）</label>
+    <input id="rate" type="number" value="5" min="0" max="15" step="0.01">
 
-      <label>长期平均通胀率（%）</label>
-      <input id="inflation" type="number" value="3" min="0" max="10" step="0.01">
+    <label>长期平均通胀率（%）</label>
+    <input id="inflation" type="number" value="3" min="0" max="10" step="0.01">
 
-      <label>退休后年支出（万元/年）</label>
-      <input id="spend" type="number" value="10" min="0" step="0.1">
+    <label>退休后年支出（万元/年）</label>
+    <input id="spend" type="number" value="10" min="0" step="0.1">
 
-      <label>养老金金额（万元/月）</label>
-      <input id="pension" type="number" value="1" min="0" step="0.01">
+    <label>养老金金额（万元/月）</label>
+    <input id="pension" type="number" value="1" min="0" step="0.01">
 
-      <label>养老金增长率（%）</label>
-      <input id="pension_growth" type="number" value="2" min="0" max="10" step="0.01">
-      <span class="tip">通常低于通胀率</span>
-      
-      <label>模拟至何年龄（岁）</label>
-      <input id="age_life" type="number" value="100" min="20" max="120">
+    <label>养老金增长率（%）</label>
+    <input id="pension_growth" type="number" value="2" min="0" max="10" step="0.01">
 
-      <button type="submit">测算</button>
-    </form>
-    <div class="result" id="result"></div>
-  </div>
+    <label>模拟至何年龄（岁）</label>
+    <input id="age_life" type="number" value="100" min="20" max="120">
+
+    <label>收益波动幅度（%）</label>
+    <input id="volatility" type="number" value="2" min="0" max="30" step="0.1">
+    <span class="tip">每年收益率随机在 ±波动范围内变化</span>
+
+    <button type="submit">测算</button>
+  </form>
+
+  <div class="magic-tip">✨ 点一点小魔法，看看人生轨迹如何变化！</div>
+  <div id="magic-tip-msg"></div>
+  <div id="magic-btns"></div>
+  <div class="result" id="result"></div>
+</div>
 
 <script>
 function simulateRetire({
   age_now, age_retire, age_pension, age_life, current, annualsave, rate, inflation,
-  spend, pension, pension_growth
+  spend, pension, pension_growth, volatility
 }) {
   age_now = Number(age_now);
   age_retire = Number(age_retire);
@@ -84,91 +121,64 @@ function simulateRetire({
 
   let assets = Number(current)*10000;
   let annualsaveW = Number(annualsave)*10000;
-  let r = Number(rate)/100 - 0.01; // 安全缓冲 -1%
+  let baseRate = Number(rate)/100 - 0.01; // 保守缓冲
+  let vol = Number(volatility)/100;
   let i = Number(inflation)/100;
   let pg = Number(pension_growth)/100;
   let spendW = Number(spend)*10000;
   let pension_year = Number(pension)*10000*12;
 
   let assets_peak = 0;
-  let year = 0;
   let history = [];
   let totalSpend = 0, totalPension = 0, shortfall = 0;
 
   // 工作阶段（储蓄分摊到全年）
-  for (; year < workyears; year++) {
-    assets += annualsaveW / 2; // 上半年投入
-    assets *= (1 + r);
-    assets += annualsaveW / 2; // 下半年投入
-    history.push({
-      year: age_now + year + 1,
-      phase: '工作',
-      income: annualsaveW,
-      spend: 0,
-      balance: assets
-    });
+  for (let y=0; y<workyears; y++) {
+    assets += annualsaveW / 2;
+    let randRate = baseRate + (Math.random()*2 - 1) * vol;
+    assets *= (1 + randRate);
+    assets += annualsaveW / 2;
+    history.push({year: age_now + y + 1, phase: '工作', income: annualsaveW, spend: 0, balance: assets, rate: randRate});
     assets_peak = Math.max(assets_peak, assets);
   }
 
-  let retireAge = age_retire;
   let retireStartAssets = assets;
 
-  // 退休阶段（先支出/养老金，再收益）
+  // 退休阶段
   for (let j = 0; j < retireyears; j++) {
-    let outflow = spendW * Math.pow(1 + i, j); 
-    let inflow = 0;
-    if (j >= pension_gap) {
-      inflow = pension_year * Math.pow(1 + pg, j - pension_gap);
-    }
-    assets += inflow - outflow; 
-    assets *= (1 + r); // 剩余资产计收益
+    let outflow = spendW * Math.pow(1 + i, j);
+    let inflow = j >= pension_gap ? pension_year * Math.pow(1 + pg, j - pension_gap) : 0;
+    assets += inflow - outflow;
+    let randRate = baseRate + (Math.random()*2 - 1) * vol;
+    assets *= (1 + randRate);
 
     totalSpend += outflow;
     totalPension += inflow;
     assets_peak = Math.max(assets_peak, assets);
 
-    history.push({
-      year: retireAge + j + 1,
-      phase: '退休',
-      income: inflow,
-      spend: outflow,
-      balance: assets
-    });
-
+    history.push({year: age_retire + j + 1, phase: '退休', income: inflow, spend: outflow, balance: assets, rate: randRate});
     if (assets <= 0 && shortfall == 0) shortfall = j + 1;
     if (assets < 0) assets = 0;
   }
 
-  let realEndAssets = assets / Math.pow(1 + i, retireyears); // 折算购买力
+  let realEndAssets = assets / Math.pow(1 + i, retireyears);
 
-  return {
-    retireAge,
-    retireStartAssets,
-    endAssets: assets,
-    realEndAssets,
-    assets_peak,
-    totalSpend,
-    totalPension,
-    shortfall,
-    history,
-    age_now,
-    age_life
-  }
+  return {retireAge: age_retire, retireStartAssets, endAssets: assets, realEndAssets,
+          assets_peak, totalSpend, totalPension, shortfall, history, age_now, age_life};
 }
 
 function showResult(r){
-  let html = '';
-  html += `<div>你计划在 <b>${r.retireAge}</b> 岁退休，累计存下 <b>${(r.retireStartAssets/10000).toFixed(1)}</b> 万元。</div>`;
+  document.getElementById('magic-tip-msg').innerHTML = '';
+  let html = `<div>你计划在 <b>${r.retireAge}</b> 岁退休，累计存下 <b>${(r.retireStartAssets/10000).toFixed(1)}</b> 万元。</div>`;
   if(r.shortfall==0){
-    html += `<div class="success" style="margin:11px 0 3px 0;"><b>✓ 可从 <b>${r.retireAge}</b> 岁一直支撑到 <b>${r.age_life}</b> 岁</b>，最终剩余 <b>${(r.endAssets/10000).toFixed(1)}</b> 万（名义），折算购买力约 <b>${(r.realEndAssets/10000).toFixed(1)}</b> 万。</div>`;
+    html += `<div class="success"><b>✓ 可支撑到 ${r.age_life} 岁</b>，最终剩余 <b>${(r.endAssets/10000).toFixed(1)}</b> 万（名义），购买力折算约 <b>${(r.realEndAssets/10000).toFixed(1)}</b> 万。</div>`;
   }else{
-    let failage = r.retireAge + r.shortfall;
-    html += `<div class="warn" style="margin:11px 0 3px 0;">✗ 资金将在 <b>${failage}</b> 岁（退休第${r.shortfall}年）耗尽！可考虑增加本金、减少支出或延迟退休。</div>`;
+    html += `<div class="warn">✗ 资金将在 ${r.retireAge + r.shortfall} 岁耗尽！</div>`;
   }
-  html += `<div class="small">【资金峰值】${(r.assets_peak/10000).toFixed(1)} 万｜累计支出 ${(r.totalSpend/10000).toFixed(1)} 万｜累计领养老金 ${(r.totalPension/10000).toFixed(1)} 万</div>`;
-  html += `<details style="margin-top:20px;"><summary style="cursor:pointer;">逐年明细</summary><table><tr><th>年龄</th><th>阶段</th><th>收入/养老金</th><th>花费</th><th>年终资产</th></tr>`;
+  html += `<div class="small">峰值 ${ (r.assets_peak/10000).toFixed(1)} 万｜累计支出 ${ (r.totalSpend/10000).toFixed(1)} 万｜累计养老金 ${ (r.totalPension/10000).toFixed(1)} 万</div>`;
+  html += `<details><summary>逐年明细（含随机收益率）</summary><table><tr><th>年龄</th><th>阶段</th><th>收入</th><th>支出</th><th>资产</th><th>当年收益率</th></tr>`;
   for(const item of r.history){
-    html += `<tr><td>${item.year}</td><td>${item.phase}</td><td>${(item.income/10000).toFixed(1)}</td><td>${(item.spend/10000).toFixed(1)}</td><td>${(item.balance/10000).toFixed(2)}</td></tr>`;
+    html += `<tr><td>${item.year}</td><td>${item.phase}</td><td>${(item.income/10000).toFixed(1)}</td><td>${(item.spend/10000).toFixed(1)}</td><td>${(item.balance/10000).toFixed(2)}</td><td>${(item.rate*100).toFixed(2)}%</td></tr>`;
   }
   html += `</table></details>`;
   document.getElementById('result').innerHTML = html;
@@ -177,23 +187,39 @@ function showResult(r){
 document.getElementById('ff').onsubmit = function(e){
   e.preventDefault();
   let vals = {
-    age_now: document.getElementById('age_now').value,
-    age_retire: document.getElementById('age_retire').value,
-    age_pension: document.getElementById('age_pension').value,
-    age_life: document.getElementById('age_life').value,
-    current: document.getElementById('current').value,
-    annualsave: document.getElementById('annualsave').value,
-    rate: document.getElementById('rate').value,
-    inflation: document.getElementById('inflation').value,
-    spend: document.getElementById('spend').value,
-    pension: document.getElementById('pension').value,
-    pension_growth: document.getElementById('pension_growth').value
+    age_now: age_now.value, age_retire: age_retire.value, age_pension: age_pension.value,
+    age_life: age_life.value, current: current.value, annualsave: annualsave.value,
+    rate: rate.value, inflation: inflation.value, spend: spend.value,
+    pension: pension.value, pension_growth: pension_growth.value,
+    volatility: volatility.value
   };
-  let ret = simulateRetire(vals);
-  showResult(ret);
+  showResult(simulateRetire(vals));
 };
-// 默认自动试算一次
-setTimeout(()=>{document.getElementById('ff').dispatchEvent(new Event('submit'));},250);
+
+// 魔法按钮
+const magicList = [
+  {text:"降通胀", op:()=>inflation.value=Math.max(0, inflation.value-1), msg:"🌾 通胀率-1%，钱更值钱！"},
+  {text:"涨房价", op:()=>current.value=(+current.value+20).toFixed(1), msg:"🏠 资产+20万！"},
+  {text:"加养老金", op:()=>pension.value=(+pension.value+0.2).toFixed(2), msg:"🧓 养老金+2000元/月！"},
+  {text:"提前退休", op:()=>age_retire.value=Math.max(+age_now.value+1, +age_retire.value-2), msg:"🌴 提前退休2年！"},
+  {text:"延后退休", op:()=>age_retire.value=Math.min(+age_life.value-1, +age_retire.value+2), msg:"💼 延后退休2年！"},
+  {text:"减少支出", op:()=>spend.value=Math.max(0, spend.value-1).toFixed(1), msg:"🍋 每年省1万！"},
+  {text:"加收益率", op:()=>rate.value=Math.min(15, +rate.value+1), msg:"🚀 收益率+1%！"}
+];
+
+function renderMagicBtns(){
+  let area = document.getElementById('magic-btns');
+  magicList.forEach(item=>{
+    let btn=document.createElement('button');
+    btn.type="button"; btn.className="magic-btn"; btn.innerText=item.text;
+    btn.onclick=()=>{item.op(); ff.dispatchEvent(new Event('submit')); setTimeout(()=>magicTip(item.msg),60)};
+    area.appendChild(btn);
+  });
+}
+function magicTip(msg){ document.getElementById('magic-tip-msg').innerHTML = msg; }
+
+renderMagicBtns();
+setTimeout(()=>ff.dispatchEvent(new Event('submit')),250);
 </script>
 </body>
 </html>
