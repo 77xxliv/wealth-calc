@@ -35,35 +35,32 @@
 
       <label>可领取养老金年龄（岁）</label>
       <input id="age_pension" type="number" value="55" min="18" max="100">
-      <span class="tip">养老金账户可发放的年龄（含企业/社保/公积金）</span>
+      <span class="tip">养老金账户可发放的年龄</span>
 
       <label>当前存款（万元）</label>
       <input id="current" type="number" value="50" min="0" step="0.1">
-      <span class="tip">现有可投资净资产</span>
 
       <label>工作期间年均储蓄（万元/年）</label>
       <input id="annualsave" type="number" value="10" min="0" step="0.1">
-      <span class="tip">可自由调整以模拟不同储蓄计划</span>
 
       <label>理财年化收益率（%）</label>
       <input id="rate" type="number" value="5" min="0" max="15" step="0.01">
-      <span class="tip">退休和工作期间均按此收益率计复利</span>
 
       <label>长期平均通胀率（%）</label>
       <input id="inflation" type="number" value="3" min="0" max="10" step="0.01">
-      <span class="tip">用来测算真实购买力变化</span>
 
       <label>退休后年支出（万元/年）</label>
       <input id="spend" type="number" value="10" min="0" step="0.1">
-      <span class="tip">包括养老保险后自己需覆盖的总生活成本</span>
 
       <label>养老金金额（万元/月）</label>
       <input id="pension" type="number" value="1" min="0" step="0.01">
-      <span class="tip">每月现值，自动按通胀调增</span>
+
+      <label>养老金增长率（%）</label>
+      <input id="pension_growth" type="number" value="2" min="0" max="10" step="0.01">
+      <span class="tip">通常低于通胀率</span>
       
       <label>模拟至何年龄（岁）</label>
       <input id="age_life" type="number" value="100" min="20" max="120">
-      <span class="tip">测算到哪一年结束</span>
 
       <button type="submit">测算</button>
     </form>
@@ -71,10 +68,9 @@
   </div>
 
 <script>
-// 主测算函数：所有年龄转换为年数
 function simulateRetire({
   age_now, age_retire, age_pension, age_life, current, annualsave, rate, inflation,
-  spend, pension
+  spend, pension, pension_growth
 }) {
   age_now = Number(age_now);
   age_retire = Number(age_retire);
@@ -88,8 +84,9 @@ function simulateRetire({
 
   let assets = Number(current)*10000;
   let annualsaveW = Number(annualsave)*10000;
-  let r = Number(rate)/100;
+  let r = Number(rate)/100 - 0.01; // 安全缓冲 -1%
   let i = Number(inflation)/100;
+  let pg = Number(pension_growth)/100;
   let spendW = Number(spend)*10000;
   let pension_year = Number(pension)*10000*12;
 
@@ -98,17 +95,16 @@ function simulateRetire({
   let history = [];
   let totalSpend = 0, totalPension = 0, shortfall = 0;
 
-  // 工作存钱阶段
+  // 工作阶段（储蓄分摊到全年）
   for (; year < workyears; year++) {
+    assets += annualsaveW / 2; // 上半年投入
     assets *= (1 + r);
-    assets += annualsaveW;
+    assets += annualsaveW / 2; // 下半年投入
     history.push({
       year: age_now + year + 1,
       phase: '工作',
       income: annualsaveW,
       spend: 0,
-      spendAdj: 0,
-      pension: 0,
       balance: assets
     });
     assets_peak = Math.max(assets_peak, assets);
@@ -117,15 +113,16 @@ function simulateRetire({
   let retireAge = age_retire;
   let retireStartAssets = assets;
 
-  // 退休阶段
+  // 退休阶段（先支出/养老金，再收益）
   for (let j = 0; j < retireyears; j++) {
-    assets *= (1 + r);
-    let outflow = spendW * Math.pow(1 + i, j); // 通胀调整后支出
+    let outflow = spendW * Math.pow(1 + i, j); 
     let inflow = 0;
     if (j >= pension_gap) {
-      inflow = pension_year * Math.pow(1 + i, j - pension_gap); // 养老金也考虑通胀增长
+      inflow = pension_year * Math.pow(1 + pg, j - pension_gap);
     }
-    assets += inflow - outflow;
+    assets += inflow - outflow; 
+    assets *= (1 + r); // 剩余资产计收益
+
     totalSpend += outflow;
     totalPension += inflow;
     assets_peak = Math.max(assets_peak, assets);
@@ -135,18 +132,20 @@ function simulateRetire({
       phase: '退休',
       income: inflow,
       spend: outflow,
-      spendAdj: outflow / (Math.pow(1 + i, j)), // 真实支出
-      pension: inflow,
       balance: assets
     });
+
     if (assets <= 0 && shortfall == 0) shortfall = j + 1;
     if (assets < 0) assets = 0;
   }
+
+  let realEndAssets = assets / Math.pow(1 + i, retireyears); // 折算购买力
 
   return {
     retireAge,
     retireStartAssets,
     endAssets: assets,
+    realEndAssets,
     assets_peak,
     totalSpend,
     totalPension,
@@ -161,21 +160,17 @@ function showResult(r){
   let html = '';
   html += `<div>你计划在 <b>${r.retireAge}</b> 岁退休，累计存下 <b>${(r.retireStartAssets/10000).toFixed(1)}</b> 万元。</div>`;
   if(r.shortfall==0){
-    html += `<div class="success" style="margin:11px 0 3px 0;"><b>✓ 可从 <b>${r.retireAge}</b> 岁一直支撑到 <b>${r.age_life}</b> 岁，最终还能剩余 <b>${(r.endAssets/10000).toFixed(1)}</b> 万元！</b></div>`;
+    html += `<div class="success" style="margin:11px 0 3px 0;"><b>✓ 可从 <b>${r.retireAge}</b> 岁一直支撑到 <b>${r.age_life}</b> 岁</b>，最终剩余 <b>${(r.endAssets/10000).toFixed(1)}</b> 万（名义），折算购买力约 <b>${(r.realEndAssets/10000).toFixed(1)}</b> 万。</div>`;
   }else{
     let failage = r.retireAge + r.shortfall;
     html += `<div class="warn" style="margin:11px 0 3px 0;">✗ 资金将在 <b>${failage}</b> 岁（退休第${r.shortfall}年）耗尽！可考虑增加本金、减少支出或延迟退休。</div>`;
   }
-  html += `<div class="small">【资金峰值】${(r.assets_peak/10000).toFixed(1)} 万｜累计（名义）支出 ${(r.totalSpend/10000).toFixed(1)} 万｜累计领养老金 ${(r.totalPension/10000).toFixed(1)} 万</div>`;
+  html += `<div class="small">【资金峰值】${(r.assets_peak/10000).toFixed(1)} 万｜累计支出 ${(r.totalSpend/10000).toFixed(1)} 万｜累计领养老金 ${(r.totalPension/10000).toFixed(1)} 万</div>`;
   html += `<details style="margin-top:20px;"><summary style="cursor:pointer;">逐年明细</summary><table><tr><th>年龄</th><th>阶段</th><th>收入/养老金</th><th>花费</th><th>年终资产</th></tr>`;
   for(const item of r.history){
     html += `<tr><td>${item.year}</td><td>${item.phase}</td><td>${(item.income/10000).toFixed(1)}</td><td>${(item.spend/10000).toFixed(1)}</td><td>${(item.balance/10000).toFixed(2)}</td></tr>`;
   }
   html += `</table></details>`;
-  html += `<div class="small" style="margin-top:10px;line-height:1.6">
-  说明：只需填写年龄点，系统自动推算存钱年数与养老金断档年数。退休后每年按通胀调整支出，养老金、理财收益全部复利计入。集中压力测试影响决策。
-  <br>建议：依自身风险承受力，合理设置年化收益率和通胀，并多尝试不同退休/养老金年龄。养老金可选通胀递增（输入时同步调整），长期理财组合建议重视抗通胀和稳健收益。
-  </div>`;
   document.getElementById('result').innerHTML = html;
 }
 
@@ -192,6 +187,7 @@ document.getElementById('ff').onsubmit = function(e){
     inflation: document.getElementById('inflation').value,
     spend: document.getElementById('spend').value,
     pension: document.getElementById('pension').value,
+    pension_growth: document.getElementById('pension_growth').value
   };
   let ret = simulateRetire(vals);
   showResult(ret);
