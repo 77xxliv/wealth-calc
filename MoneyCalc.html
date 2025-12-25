@@ -2,7 +2,7 @@
 <html lang="zh-CN">
 <head>
 <meta charset="UTF-8">
-<title>个人财务计算面板（上海 2025）</title>
+<title>个人财务计算面板（上海2025 + 精确到月养老金公式）</title>
 <meta name="viewport" content="width=device-width,initial-scale=1">
 <style>
 body {font-family:"微软雅黑",Arial,sans-serif;background:#f5f6fa;margin:0;}
@@ -15,6 +15,7 @@ body {font-family:"微软雅黑",Arial,sans-serif;background:#f5f6fa;margin:0;}
 label {display:block;margin:12px 0 4px;font-weight:bold;font-size:13px;}
 input,select {padding:6px 8px;font-size:14px;width:100%;box-sizing:border-box;border:1px solid #ccc;border-radius:6px;outline:none;transition:border-color 0.2s;}
 input:focus,select:focus {border-color:#1976d2;}
+.row {display:flex;gap:10px;}
 button {margin-top:15px;padding:8px 20px;font-size:14px;background:#1976d2;color:#fff;border:none;border-radius:20px;cursor:pointer;transition:background 0.2s;}
 button:hover {background:#145ea8;}
 .result {margin-top:16px;padding-top:12px;border-top:1px dashed #ccc;}
@@ -26,6 +27,8 @@ button:hover {background:#145ea8;}
 .icon-btn svg {width:18px;height:18px;fill:#fff;transition:transform 0.3s;}
 .icon-btn:hover {background:#145ea8;}
 .icon-btn:hover svg {transform:rotate(180deg);}
+.details {background:#fafafa;padding:10px;border:1px solid #ddd;border-radius:8px;margin-top:10px;display:none;}
+.toggle-link {color:#1976d2;cursor:pointer;font-size:13px;display:inline-block;margin-top:8px;}
 </style>
 </head>
 <body>
@@ -98,13 +101,21 @@ button:hover {background:#145ea8;}
   
   <!-- 养老金 -->
   <div id="ylj" class="tool">
-    <h3>上海养老金预估 <span class="tip">2025</span></h3>
+    <h3>上海养老金预估 <span class="tip">精确到月</span></h3>
     <label>月工资（元）：</label>
     <input type="number" id="ylj_salary" placeholder="留空用全局工资" step="50">
-    <label>已缴费年数：</label>
-    <input type="number" id="ylj_years_paid" value="0">
-    <label>已缴费月数：</label>
-    <input type="number" id="ylj_months_paid" value="0">
+
+    <div class="row">
+      <div style="flex:1">
+        <label>已缴费年数：</label>
+        <input type="number" id="ylj_years_paid" value="0">
+      </div>
+      <div style="flex:1">
+        <label>已缴费月数：</label>
+        <input type="number" id="ylj_months_paid" value="0">
+      </div>
+    </div>
+
     <label>计划总缴费年限（年）：</label>
     <input type="number" id="ylj_plan" value="20">
     <label>当前个人账户余额（元）：</label>
@@ -120,6 +131,8 @@ button:hover {background:#145ea8;}
     <label>上年社平工资（元）</label>
     <input type="number" id="ylj_avg" value="12434">
     <div class="result" id="ylj_result"></div>
+    <span class="toggle-link" onclick="toggleDetails()">展开计算明细 ▼</span>
+    <div class="details" id="ylj_details"></div>
   </div>
 </div>
 
@@ -188,7 +201,7 @@ document.getElementById('gjj_month_amt').addEventListener('input',function(){
   this.dataset.manual=true;
 });
 
-// 个税计算（略）
+// 个税计算
 const monthTable=[{up:3000,rate:0.03,quick:0},{up:12000,rate:0.1,quick:210},{up:25000,rate:0.2,quick:1410},{up:35000,rate:0.25,quick:2660},{up:55000,rate:0.3,quick:4410},{up:80000,rate:0.35,quick:7160},{up:Infinity,rate:0.45,quick:15160}];
 const yearTable=[{up:36000,rate:0.03,quick:0},{up:144000,rate:0.1,quick:2520},{up:300000,rate:0.2,quick:16920},{up:420000,rate:0.25,quick:31920},{up:660000,rate:0.3,quick:52920},{up:960000,rate:0.35,quick:85920},{up:Infinity,rate:0.45,quick:181920}];
 function getTaxTable(t,tb){for(let b of tb)if(t<=b.up)return b;}
@@ -229,7 +242,7 @@ function computeTax(){
   document.getElementById('tax_result').innerHTML=`月到手：<span class="sum">${afterMonth.toFixed(2)}</span> 元<br>年终奖（${coef}倍）：${bonus.toFixed(2)} 元，到手：<span class="sum">${afterBonus.toFixed(2)}</span> 元<br>全年总到手：<span class="sum">${(afterMonth*12+afterBonus).toFixed(2)}</span> 元`;
 }
 
-// 养老金计算（新版公式）
+// 养老金计算（精确到月）
 const monthMap={"50":195,"55":170,"60":139};
 function computeYLJ(){
   let s=getSalary('ylj_salary');
@@ -244,40 +257,45 @@ function computeYLJ(){
   let planYears=+document.getElementById('ylj_plan').value;
   let currentBalance=+document.getElementById('ylj_paid').value||0;
 
-  // 本人缴费基数
   let salary=index*avg;
-
-  // 已缴费总年限
   let paidYearsTotal=yearsPaid + monthsPaid/12;
-
-  // 未来缴费年限
   let futureYears=planYears - paidYearsTotal;
   if(futureYears<0) futureYears=0;
-
-  // 未来缴纳额
   let futureAmount=futureYears*12*salary*0.08;
-
-  // 退休时个人账户总额
   let totalAccount=currentBalance + futureAmount;
 
-  // 基础养老金
-  let basePension=((avg+salary)/2) * (paidYearsTotal*0.01);
-
-  // 个人账户养老金
+  // 精确到月基础养老金公式
+  let baseRate = yearsPaid*0.01 + monthsPaid*0.00083;
+  let basePension=((avg+salary)/2) * baseRate;
   let personalPension=totalAccount / monthMap[document.getElementById('ylj_age').value];
-
-  // 总养老金
   let totalPension=basePension + personalPension;
 
   document.getElementById('ylj_result').innerHTML=
     `预估养老金（月）：<span class="sum">${totalPension.toFixed(2)}</span> 元<br>`+
-    `基础养老金：${basePension.toFixed(2)} 元<br>`+
-    `个人账户养老金：${personalPension.toFixed(2)} 元<br>`+
-    `未来缴费额：${futureAmount.toFixed(2)} 元<br>`+
-    `总缴费年限：${(paidYearsTotal+futureYears).toFixed(2)} 年<br>`+
-    `退休时个人账户总额：${totalAccount.toFixed(2)} 元`;
+    `基础养老金：${basePension.toFixed(2)} 元  个人账户养老金：${personalPension.toFixed(2)} 元<br>`+
+    `未来缴费额：${futureAmount.toFixed(2)} 元  退休时个人账户总额：${totalAccount.toFixed(2)} 元`;
+
+  document.getElementById('ylj_details').innerHTML=
+    `<b>计算明细</b><br>`+
+    `本人缴费基数：${salary.toFixed(2)} 元<br>`+
+    `已缴费：${yearsPaid} 年 ${monthsPaid} 月<br>`+
+    `未来缴费年限：${futureYears.toFixed(2)} 年<br>`+
+    `基础养老金公式：((社平工资 ${avg} + 缴费基数 ${salary.toFixed(2)}) ÷ 2) × (${yearsPaid} × 1% + ${monthsPaid} × 0.083%) = ${basePension.toFixed(2)} 元<br>`+
+    `个人账户养老金公式：退休时个人账户总额 ${totalAccount.toFixed(2)} ÷ 计发月数 ${monthMap[document.getElementById('ylj_age').value]} = ${personalPension.toFixed(2)} 元`;
 }
 document.getElementById('ylj_index').addEventListener('input',function(){this.dataset.manual=true;});
+function toggleDetails(){
+  let d=document.getElementById('ylj_details');
+  let link=document.querySelector('.toggle-link');
+  if(d.style.display==='none' || d.style.display===''){
+    d.style.display='block';
+    link.innerText='收起计算明细 ▲';
+  }else{
+    d.style.display='none';
+    link.innerText='展开计算明细 ▼';
+  }
+}
+document.getElementById('ylj_details').style.display='none';
 
 // 保存与加载
 function saveInputs(){let data={};document.querySelectorAll('input,select').forEach(el=>{data[el.id]=el.value;});localStorage.setItem('financeData',JSON.stringify(data));}
