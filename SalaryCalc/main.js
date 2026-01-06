@@ -2,78 +2,82 @@ import { renderGJJ, triggerGJJ } from "./gjj.js";
 import { renderTax, triggerTax } from "./tax.js";
 import { renderYLJ, triggerYLJ } from "./ylj.js";
 
+// tab 定义
 const tabContent = document.getElementById("tab-content");
 const tabs = document.querySelectorAll(".tab");
-
 const renderMap = {
-    gjj: renderGJJ,
-    tax: renderTax,
-    ylj: renderYLJ,
+  gjj: renderGJJ,
+  tax: renderTax,
+  ylj: renderYLJ,
 };
-
 let activeTab = "gjj";
 
-// 参数区变更联动
-["global_salary","param_gjj_rate","param_gjj_base_min","param_gjj_base_max",
- "param_base_min","param_base_max","param_social_rate"].forEach(id=>{
-    let el = document.getElementById(id);
-    el.addEventListener('input', ()=>{
-        saveInputs();
-        loadTab();   // 刷新当前tab
-    });
+// 主参数区 input 都要触发刷新
+[
+  "global_salary",
+  "param_gjj_rate", "param_gjj_base_min", "param_gjj_base_max",
+  "param_base_min", "param_base_max", "param_social_rate"
+].forEach(id => {
+  document.getElementById(id).addEventListener("input", () => {
+    saveInputs();
+    loadTab();  // 立即刷新 tab
+  });
 });
 
-// Tab切换
+// tab 切换
 tabs.forEach(tab => {
   tab.onclick = () => {
-    if(tab.classList.contains('active')) return;
+    if (tab.classList.contains("active")) return;
     tabs.forEach(t => t.classList.remove("active"));
     tab.classList.add("active");
     activeTab = tab.dataset.tool;
-    loadTab();  // 渲染新内容区
+    loadTab();
   };
 });
 
-function getParams(){
+function getParams() {
   let params = {};
   document.querySelectorAll("input,select").forEach(el => { params[el.id] = el.value; });
   return params;
 }
 
-// 自动保存与载入
-function saveInputs(){
+// 自动保存
+function saveInputs() {
   let data = {};
-  document.querySelectorAll('input,select').forEach(el => {data[el.id]=el.value;});
+  document.querySelectorAll('input,select').forEach(el => { data[el.id] = el.value; });
   localStorage.setItem('financeData', JSON.stringify(data));
 }
-function loadInputs(){
+
+// 自动载入
+function loadInputs() {
   let data = localStorage.getItem('financeData');
-  if(data){
-    try{
+  if (data) {
+    try {
       data = JSON.parse(data);
-      for(let id in data) if(document.getElementById(id)) document.getElementById(id).value = data[id];
-    }catch(e){}
+      for (let id in data)
+        if (document.getElementById(id)) document.getElementById(id).value = data[id];
+    } catch (e) { }
   }
 }
 
-// 通用：自动为 tab-content 下input/select绑定input/change事件&保存
-function bindTabInputs(){
+// 重：只为当前 tab-content 内 input 绑定 input/change 事件
+function bindTabInputs() {
   tabContent.querySelectorAll('input,select').forEach(el => {
-    el.oninput = el.onchange = ()=>{
-      triggerCurrentTab();
-      saveInputs();
+    el.oninput = el.onchange = () => {
+      saveInputs();      // 保存
+      triggerCurrentTab(); // 刷新
     };
   });
 }
 
-function triggerCurrentTab(){
-  const params = getParams();
-  if(activeTab==="gjj") triggerGJJ(params);
-  else if(activeTab==="tax") triggerTax(params);
-  else if(activeTab==="ylj") triggerYLJ(params);
+// tab内容变化就触发trigger
+function triggerCurrentTab() {
+  if (activeTab === "gjj") triggerGJJ();
+  else if (activeTab === "tax") triggerTax();
+  else if (activeTab === "ylj") triggerYLJ();
 }
 
-// 主区：参数面板等
+// 参数面板
 document.getElementById("toggle-settings").onclick = () => {
   let sp = document.getElementById("settings-panel");
   if (sp.style.display === "none" || sp.style.display === "") {
@@ -85,26 +89,26 @@ document.getElementById("toggle-settings").onclick = () => {
   }
 };
 document.getElementById("clear-data").onclick = () => {
-  if(confirm("确定恢复默认值并清空所有保存的数据吗？")){
+  if (confirm("确定恢复默认值并清空所有保存的数据吗？")) {
     localStorage.removeItem('financeData');
     location.reload();
   }
 };
 
-function loadTab(){
-  // 渲染并绑定事件
+// tab内容渲染
+function loadTab() {
   tabContent.innerHTML = "";
   renderMap[activeTab](tabContent, getParams());
   bindTabInputs();
+  triggerCurrentTab();
 }
 
 loadInputs();
 loadTab();
 
-window.triggerAll = function triggerAll(){
-  // 可被控制台调试用
-  triggerGJJ(getParams());
-  triggerTax(getParams());
-  triggerYLJ(getParams());
+window.triggerAll = function triggerAll() {
+  triggerGJJ();
+  triggerTax();
+  triggerYLJ();
   saveInputs();
 };
