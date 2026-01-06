@@ -1,1 +1,38 @@
 
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <title>个人财务计算面板（2025）</title>
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <link rel="stylesheet" href="style.css">
+</head>
+<body>
+<div class="container">
+  <!-- 全局参数区 -->
+  <label>全局月工资（元）：</label>
+  <input type="number" id="global_salary" value="20000" step="50">
+  <button id="toggle-settings">打开参数设置</button>
+  <button id="clear-data" class="icon-btn" title="恢复默认值"><!--...SVG略--></button>
+
+  <div class="settings-panel" id="settings-panel">
+    <!-- 各参数与原页面一致 -->
+    <!-- ...（公积金与社保比例/基数） -->
+    <label>公积金比例（单位/个人，%）：</label>
+    <input type="number" id="param_gjj_rate" value="12">
+    <!-- ...下限/上限等继续 -->
+    <!-- ... -->
+  </div>
+
+  <!-- Tabs -->
+  <div class="tabs">
+    <div class="tab active" data-tool="gjj">🏠 公积金</div>
+    <div class="tab" data-tool="tax">💰 个税</div>
+    <div class="tab" data-tool="ylj">👴 养老金</div>
+  </div>
+  <!-- Tab内容区，交由js渲染 -->
+  <div id="tab-content"></div>
+</div>
+<script type="module" src="main.js"></script>
+</body>
+</html>
