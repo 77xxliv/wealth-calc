@@ -11,10 +11,9 @@ export function renderGJJ(node, params) {
     <input type="number" id="gjj_balance" value="0">
     <div class="result" id="gjj_result"></div>
   `;
-  // 保持手动输入处理
+  // 数据变动均重新计算
   document.getElementById("gjj_month_amt").addEventListener('input', function(){this.dataset.manual=true;});
-
-  triggerGJJ(params); // 初次计算
+  triggerGJJ(params); // 初次渲染
 }
 
 export function triggerGJJ(params) {
@@ -35,6 +34,7 @@ export function triggerGJJ(params) {
   let total = b*Math.pow(1+r, y) + m*12*(Math.pow(1+r,y)-1)/r;
   let paid = m*y*12;
   let interest = total - (b+paid);
+
   let res = `最终累计：<span class="sum">${total.toFixed(2)}</span> 元<br>期间缴纳：${paid.toFixed(2)} 元，利息：${interest.toFixed(2)} 元`;
   document.getElementById('gjj_result').innerHTML = res;
 }
