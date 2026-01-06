@@ -1,4 +1,5 @@
 const monthMap={"50":195,"55":170,"60":139};
+
 export function renderYLJ(node, params) {
   node.innerHTML = `
     <h3>上海养老金预估 <span class="tip">精确到月</span></h3>
@@ -40,16 +41,16 @@ export function renderYLJ(node, params) {
 
 export function triggerYLJ(params){
   let get = id => parseFloat(document.getElementById(id)?.value) || 0;
-  let s = get("ylj_salary") || +params['global_salary'];
-  let avg = +params['ylj_avg'] || 0;
+  let s = get("ylj_salary") || +document.getElementById("global_salary")?.value || 0;
+  let avg = +document.getElementById('ylj_avg')?.value || 0;
   let indexInput=document.getElementById('ylj_index');
   if(indexInput && !indexInput.dataset.manual){
-    indexInput.value = (s/avg).toFixed(2);
+    indexInput.value = avg>0 ? (s/avg).toFixed(2) : '';
   }
   let index = parseFloat(indexInput.value) || 0;
   let yearsPaid = get('ylj_years_paid'), monthsPaid = get('ylj_months_paid');
-  let planYears = +params['ylj_plan'] || 0;
-  let currentBalance = +params['ylj_paid'] || 0;
+  let planYears = +document.getElementById('ylj_plan')?.value || 0;
+  let currentBalance = +document.getElementById('ylj_paid')?.value || 0;
   let salary = index*avg;
   let paidYearsTotal = yearsPaid + monthsPaid/12;
   let futureYears = planYears - paidYearsTotal;
@@ -58,7 +59,8 @@ export function triggerYLJ(params){
   let totalAccount = currentBalance + futureAmount;
   let baseRate = yearsPaid*0.01 + monthsPaid*0.00083;
   let basePension = ((avg+salary)/2) * baseRate;
-  let personalPension = totalAccount / monthMap[params['ylj_age']];
+  let age = document.getElementById('ylj_age').value;
+  let personalPension = totalAccount / monthMap[age];
   let totalPension = basePension + personalPension;
   document.getElementById('ylj_result').innerHTML =
     `预估养老金（月）：<span class="sum">${totalPension.toFixed(2)}</span> 元<br>`+
@@ -72,5 +74,5 @@ export function triggerYLJ(params){
     `基础养老金公式：((社平工资 ${avg} + 缴费基数 ${salary.toFixed(2)}) ÷ 2) × (`+
     `${yearsPaid} × 1% + ${monthsPaid} × 0.083%) = ${basePension.toFixed(2)} 元<br>`+
     `个人账户养老金公式：退休时个人账户总额 ${totalAccount.toFixed(2)} ÷ 计发月数 `+
-    `${monthMap[params['ylj_age']]} = ${personalPension.toFixed(2)} 元`;
+    `${monthMap[age]} = ${personalPension.toFixed(2)} 元`;
 }
