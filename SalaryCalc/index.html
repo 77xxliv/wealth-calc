@@ -1,4 +1,3 @@
-
 <!DOCTYPE html>
 <html lang="zh-CN">
 <head>
@@ -9,28 +8,32 @@
 </head>
 <body>
 <div class="container">
-  <!-- 全局参数区 -->
   <label>全局月工资（元）：</label>
   <input type="number" id="global_salary" value="20000" step="50">
   <button id="toggle-settings">打开参数设置</button>
-  <button id="clear-data" class="icon-btn" title="恢复默认值"><!--...SVG略--></button>
+  <button id="clear-data" class="icon-btn" title="恢复默认值">🔄</button>
 
-  <div class="settings-panel" id="settings-panel">
-    <!-- 各参数与原页面一致 -->
-    <!-- ...（公积金与社保比例/基数） -->
-    <label>公积金比例（单位/个人，%）：</label>
+  <div class="settings-panel" id="settings-panel" style="display: none;">
+    <h4>参数设置</h4>
+    <label>公积金比例（% 单位/个人相同）：</label>
     <input type="number" id="param_gjj_rate" value="12">
-    <!-- ...下限/上限等继续 -->
-    <!-- ... -->
+    <label>公积金缴纳下限：</label>
+    <input type="number" id="param_gjj_base_min" value="2486">
+    <label>公积金缴纳上限：</label>
+    <input type="number" id="param_gjj_base_max" value="33972">
+    <label>社保缴纳下限：</label>
+    <input type="number" id="param_base_min" value="6520">
+    <label>社保缴纳上限：</label>
+    <input type="number" id="param_base_max" value="33972">
+    <label>五险个人+单位比例%（示例28.3）：</label>
+    <input type="number" id="param_social_rate" value="28.3">
   </div>
 
-  <!-- Tabs -->
   <div class="tabs">
     <div class="tab active" data-tool="gjj">🏠 公积金</div>
     <div class="tab" data-tool="tax">💰 个税</div>
     <div class="tab" data-tool="ylj">👴 养老金</div>
   </div>
-  <!-- Tab内容区，交由js渲染 -->
   <div id="tab-content"></div>
 </div>
 <script type="module" src="main.js"></script>
