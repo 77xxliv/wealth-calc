@@ -2,7 +2,6 @@ import { renderGJJ, triggerGJJ } from "./gjj.js";
 import { renderTax, triggerTax } from "./tax.js";
 import { renderYLJ, triggerYLJ } from "./ylj.js";
 
-// tab 定义
 const tabContent = document.getElementById("tab-content");
 const tabs = document.querySelectorAll(".tab");
 const renderMap = {
@@ -12,7 +11,6 @@ const renderMap = {
 };
 let activeTab = "gjj";
 
-// 主参数区 input 都要触发刷新
 [
   "global_salary",
   "param_gjj_rate", "param_gjj_base_min", "param_gjj_base_max",
@@ -20,7 +18,7 @@ let activeTab = "gjj";
 ].forEach(id => {
   document.getElementById(id).addEventListener("input", () => {
     saveInputs();
-    loadTab();  // 立即刷新 tab
+    loadTab();  // 立即刷新 当前tab
   });
 });
 
@@ -41,14 +39,12 @@ function getParams() {
   return params;
 }
 
-// 自动保存
 function saveInputs() {
   let data = {};
   document.querySelectorAll('input,select').forEach(el => { data[el.id] = el.value; });
   localStorage.setItem('financeData', JSON.stringify(data));
 }
 
-// 自动载入
 function loadInputs() {
   let data = localStorage.getItem('financeData');
   if (data) {
@@ -60,24 +56,22 @@ function loadInputs() {
   }
 }
 
-// 重：只为当前 tab-content 内 input 绑定 input/change 事件
 function bindTabInputs() {
+  // fixed: 只绑定当前tab-content内input，不跨tab访问
   tabContent.querySelectorAll('input,select').forEach(el => {
     el.oninput = el.onchange = () => {
-      saveInputs();      // 保存
-      triggerCurrentTab(); // 刷新
+      saveInputs();
+      triggerCurrentTab();
     };
   });
 }
 
-// tab内容变化就触发trigger
 function triggerCurrentTab() {
   if (activeTab === "gjj") triggerGJJ();
   else if (activeTab === "tax") triggerTax();
   else if (activeTab === "ylj") triggerYLJ();
 }
 
-// 参数面板
 document.getElementById("toggle-settings").onclick = () => {
   let sp = document.getElementById("settings-panel");
   if (sp.style.display === "none" || sp.style.display === "") {
@@ -95,7 +89,6 @@ document.getElementById("clear-data").onclick = () => {
   }
 };
 
-// tab内容渲染
 function loadTab() {
   tabContent.innerHTML = "";
   renderMap[activeTab](tabContent, getParams());
@@ -105,10 +98,3 @@ function loadTab() {
 
 loadInputs();
 loadTab();
-
-window.triggerAll = function triggerAll() {
-  triggerGJJ();
-  triggerTax();
-  triggerYLJ();
-  saveInputs();
-};
