@@ -1,41 +1,33 @@
 <!DOCTYPE html>
 <html lang="zh-CN">
 <head>
-  <meta charset="UTF-8">
-  <title>个人财务计算面板（2025）</title>
-  <meta name="viewport" content="width=device-width,initial-scale=1">
-  <link rel="stylesheet" href="style.css">
+  <meta charset="UTF-8"/>
+  <title>个人财务计算器</title>
+  <style>
+    body { font-family: sans-serif; margin: 30px; }
+    .tabs { margin-bottom: 16px; }
+    .tab { display: inline-block; padding: 5px 24px; margin-right: 10px; cursor: pointer; border-bottom: 2px solid transparent;}
+    .tab.active { color: #1989fa; border-bottom: 2px solid #1989fa; font-weight: bold;}
+    #tab-content { margin-top: 12px;}
+    .sum { font-weight: bold; color: #d81e06;}
+    .tool-section { margin: 16px 0; }
+    label { display: inline-block; width: 120px; }
+    input, select { width: 120px;margin-right: 10px;}
+    #settings-panel { display: none; margin: 20px 0; padding: 14px; background: #f8f8f8; border-radius: 8px; }
+    .settings-btn { margin-right: 12px;}
+  </style>
 </head>
 <body>
-<div class="container">
-  <label>全局月工资（元）：</label>
-  <input type="number" id="global_salary" value="20000" step="50">
-  <button id="toggle-settings">打开参数设置</button>
-  <button id="clear-data" class="icon-btn" title="恢复默认值">🔄</button>
-
-  <div class="settings-panel" id="settings-panel" style="display: none;">
-    <h4>参数设置</h4>
-    <label>公积金比例（% 单位/个人相同）：</label>
-    <input type="number" id="param_gjj_rate" value="12">
-    <label>公积金缴纳下限：</label>
-    <input type="number" id="param_gjj_base_min" value="2486">
-    <label>公积金缴纳上限：</label>
-    <input type="number" id="param_gjj_base_max" value="33972">
-    <label>社保缴纳下限：</label>
-    <input type="number" id="param_base_min" value="6520">
-    <label>社保缴纳上限：</label>
-    <input type="number" id="param_base_max" value="33972">
-    <label>五险个人+单位比例%（示例28.3）：</label>
-    <input type="number" id="param_social_rate" value="28.3">
-  </div>
-
+  <h2>个人财务计算器</h2>
   <div class="tabs">
-    <div class="tab active" data-tool="gjj">🏠 公积金</div>
-    <div class="tab" data-tool="tax">💰 个税</div>
-    <div class="tab" data-tool="ylj">👴 养老金</div>
+    <span class="tab active" data-tool="gjj">公积金贷款</span>
+    <span class="tab" data-tool="tax">个人所得税</span>
+    <span class="tab" data-tool="ylj">养老金测算</span>
   </div>
   <div id="tab-content"></div>
-</div>
-<script type="module" src="main.js"></script>
+  <button id="toggle-settings" class="settings-btn">打开参数设置</button>
+  <button id="clear-data" class="settings-btn">清空数据</button>
+  <div id="settings-panel"></div>
+  <script type="module" src="./main.js"></script>
 </body>
 </html>
