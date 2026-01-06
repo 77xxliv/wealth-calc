@@ -304,7 +304,7 @@ const TaxPanel = {
     let afterBonus = bonus - bonusTax;
   
     document.getElementById('tax_result').innerHTML = `
-      税前工资：<span class="sum">${s.toFixed(2)}</span> 元<br>
+      全年税前：<span class="sum">${(s*12+bonus).toFixed(2)}</span> 元<br>
       月到手：<span class="sum">${afterMonth.toFixed(2)}</span> 元<br>
       年终奖（${coef}倍）：${bonus.toFixed(2)} 元，到手：<span class="sum">${afterBonus.toFixed(2)}</span> 元<br>
       全年总到手：<span class="sum">${(afterMonth*12+afterBonus).toFixed(2)}</span> 元
