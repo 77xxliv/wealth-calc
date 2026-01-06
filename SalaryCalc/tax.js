@@ -14,7 +14,9 @@ function autoInsurance(params){
   let gjjBase=Math.max(gjjBaseMin,Math.min(s,gjjBaseMax));
   let social=socialBase*socialRate, house=gjjBase*gjjRate;
   let input = document.getElementById('tax_insurance');
-  if(input) input.value = (social+house).toFixed(2);
+  if(input && !input.dataset.manual){
+    input.value = (social+house).toFixed(2);
+  }
 }
 
 function calcMonthTax(s,ins,special){
@@ -57,16 +59,19 @@ export function renderTax(node, params){
     </select>
     <div class="result" id="tax_result"></div>
   `;
+  // 若用户未手动填过五险一金，帮他一把
+  let insInput = document.getElementById("tax_insurance");
+  insInput.addEventListener('input', function(){this.dataset.manual=true;});
   autoInsurance(params);
   triggerTax(params);
 }
 
 export function triggerTax(params){
   let get = id => parseFloat(document.getElementById(id)?.value) || 0;
-  let s = get("tax_salary") || parseFloat(params['global_salary']);
+  let s = get("tax_salary") || parseFloat(document.getElementById("global_salary")?.value) || 0;
   let ins = get("tax_insurance");
-  let special = +params['tax_special'] || 0;
-  let coef = +params['tax_bonus_coef'] || 0;
+  let special = parseFloat(document.getElementById('tax_special')?.value) || 0;
+  let coef = parseFloat(document.getElementById('tax_bonus_coef')?.value) || 0;
   let bonus = s*coef;
   let mode = document.getElementById('tax_bonus_mode').value;
   let monthTax = calcMonthTax(s,ins,special);
