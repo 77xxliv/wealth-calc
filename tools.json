@@ -13,7 +13,7 @@
     },
     {
         "name": "SalaryCalc (收入计算器)",
-        "href": "SalaryCalc/index.html"
+        "href": "SalaryCalc/index.html", 
         "version": "v1.0",
         "description": "整合多种财务计算工具，快速获得结果"
     }
