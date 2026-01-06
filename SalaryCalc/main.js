@@ -11,18 +11,33 @@ const renderMap = {
 };
 let activeTab = "gjj";
 
-[
-  "global_salary",
-  "param_gjj_rate", "param_gjj_base_min", "param_gjj_base_max",
-  "param_base_min", "param_base_max", "param_social_rate"
-].forEach(id => {
-  document.getElementById(id).addEventListener("input", () => {
-    saveInputs();
-    loadTab();  // 立即刷新 当前tab
-  });
-});
+// 工具函数：只在 tabContent 查 input
+function get(id) {
+  const el = tabContent.querySelector(`#${id}`);
+  return el ? parseFloat(el.value) || 0 : 0;
+}
 
-// tab 切换
+// 下面传 get 给各 trigger！！避免漏查
+export function triggerCurrentTab() {
+  if (activeTab === "gjj") triggerGJJ({get});
+  if (activeTab === "tax") triggerTax({get});
+  if (activeTab === "ylj") triggerYLJ({get});
+}
+
+// 渲染绑定
+function loadTab() {
+  tabContent.innerHTML = "";
+  renderMap[activeTab](tabContent);
+  bindTabInputs();
+  triggerCurrentTab();
+}
+
+function bindTabInputs() {
+  tabContent.querySelectorAll("input,select").forEach(el => {
+    el.oninput = el.onchange = triggerCurrentTab;
+  });
+}
+
 tabs.forEach(tab => {
   tab.onclick = () => {
     if (tab.classList.contains("active")) return;
@@ -33,68 +48,4 @@ tabs.forEach(tab => {
   };
 });
 
-function getParams() {
-  let params = {};
-  document.querySelectorAll("input,select").forEach(el => { params[el.id] = el.value; });
-  return params;
-}
-
-function saveInputs() {
-  let data = {};
-  document.querySelectorAll('input,select').forEach(el => { data[el.id] = el.value; });
-  localStorage.setItem('financeData', JSON.stringify(data));
-}
-
-function loadInputs() {
-  let data = localStorage.getItem('financeData');
-  if (data) {
-    try {
-      data = JSON.parse(data);
-      for (let id in data)
-        if (document.getElementById(id)) document.getElementById(id).value = data[id];
-    } catch (e) { }
-  }
-}
-
-function bindTabInputs() {
-  // fixed: 只绑定当前tab-content内input，不跨tab访问
-  tabContent.querySelectorAll('input,select').forEach(el => {
-    el.oninput = el.onchange = () => {
-      saveInputs();
-      triggerCurrentTab();
-    };
-  });
-}
-
-function triggerCurrentTab() {
-  if (activeTab === "gjj") triggerGJJ();
-  else if (activeTab === "tax") triggerTax();
-  else if (activeTab === "ylj") triggerYLJ();
-}
-
-document.getElementById("toggle-settings").onclick = () => {
-  let sp = document.getElementById("settings-panel");
-  if (sp.style.display === "none" || sp.style.display === "") {
-    sp.style.display = "block";
-    document.getElementById("toggle-settings").innerText = "关闭参数设置";
-  } else {
-    sp.style.display = "none";
-    document.getElementById("toggle-settings").innerText = "打开参数设置";
-  }
-};
-document.getElementById("clear-data").onclick = () => {
-  if (confirm("确定恢复默认值并清空所有保存的数据吗？")) {
-    localStorage.removeItem('financeData');
-    location.reload();
-  }
-};
-
-function loadTab() {
-  tabContent.innerHTML = "";
-  renderMap[activeTab](tabContent, getParams());
-  bindTabInputs();
-  triggerCurrentTab();
-}
-
-loadInputs();
-loadTab();
+window.onload = loadTab;
