@@ -46,14 +46,12 @@ document.getElementById("clear-data").onclick = () => {
   }
 };
 
-// 汇总参数
 function getParams(){
   let params = {};
   document.querySelectorAll("input,select").forEach(el => { params[el.id] = el.value; });
   return params;
 }
 
-// 自动保存restore
 function saveInputs(){
   let data = {};
   document.querySelectorAll('input,select').forEach(el => {data[el.id]=el.value;});
@@ -73,20 +71,17 @@ function loadInputs(){
   }
 }
 
-function triggerAll(){ // 全局联动：各个模块的input都能驱动重计算
-  // 不同tab内容主动监听变动，也可全局触发
+function triggerAll(){
   triggerGJJ(getParams());
   triggerTax(getParams());
   triggerYLJ(getParams());
   saveInputs();
 }
-window.triggerAll = triggerAll; // 或提供全局给模块手动调用
+window.triggerAll = triggerAll;
 
-// 初始化
 loadInputs();
 loadTab();
 
-// 所有input/select监听
 document.querySelectorAll('input,select').forEach(el=>{
   el.addEventListener('input',triggerAll);
   el.addEventListener('change',triggerAll);
