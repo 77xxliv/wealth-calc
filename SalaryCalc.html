@@ -1,0 +1,448 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<title>个人财务计算面板（上海2025）</title>
+<meta name="viewport" content="width=device-width,initial-scale=1">
+
+<style>
+body {font-family:"微软雅黑",Arial,sans-serif;background:#f5f6fa;margin:0;}
+.container {max-width:560px;margin:20px auto;background:#fff;padding:20px;border-radius:12px;box-shadow:0 2px 10px rgba(0,0,0,0.05);}
+.tabs {display:flex;border-bottom:2px solid #eee;margin-bottom:14px;}
+.tab {flex:1;text-align:center;padding:10px 0;cursor:pointer;font-weight:bold;font-size:14px;color:#555;transition:all 0.2s;}
+.tab.active {color:#1976d2;border-bottom:2px solid #1976d2;}
+label {display:block;margin:12px 0 4px;font-weight:bold;font-size:13px;}
+input,select {padding:6px 8px;font-size:14px;width:100%;box-sizing:border-box;border:1px solid #ccc;border-radius:6px;outline:none;transition:border-color 0.2s;}
+input:focus,select:focus {border-color:#1976d2;}
+.row {display:flex;gap:10px;}
+button {margin-top:15px;padding:8px 20px;font-size:14px;background:#1976d2;color:#fff;border:none;border-radius:20px;cursor:pointer;transition:background 0.2s;}
+button:hover {background:#145ea8;}
+.result {margin-top:16px;padding-top:12px;border-top:1px dashed #ccc;}
+.sum {font-size:18px;color:#e8711f;font-weight:bold;}
+.tip {font-size:12px;color:#888;}
+.settings-panel {background:#fafafa;padding:10px;border:1px solid #ddd;border-radius:8px;margin-top:10px;display:none;animation:fadeIn 0.3s;}
+@keyframes fadeIn {from{opacity:0;}to{opacity:1;}}
+.icon-btn {background:#1976d2;border:none;cursor:pointer;vertical-align:middle;padding:6px;margin-left:8px;border-radius:50%;display:inline-flex;align-items:center;justify-content:center;transition:background 0.2s;}
+.icon-btn svg {width:18px;height:18px;fill:#fff;transition:transform 0.3s;}
+.icon-btn:hover {background:#145ea8;}
+.icon-btn:hover svg {transform:rotate(180deg);}
+.details {background:#fafafa;padding:10px;border:1px solid #ddd;border-radius:8px;margin-top:10px;display:none;}
+.toggle-link {color:#1976d2;cursor:pointer;font-size:13px;display:inline-block;margin-top:8px;}
+.hide {display:none;}
+</style>
+</head>
+<body>
+<div class="container">
+  <!-- 全局工资 & 参数设置 -->
+  <label>全局月工资（元）：</label>
+  <input type="number" id="global_salary" value="20000" step="50">
+  <button id="toggle-settings">打开参数设置</button>
+  <button id="clear-data" class="icon-btn" title="恢复默认值">
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24">
+      <path d="M17.65 6.35A7.95 7.95 0 0 0 12 4V1L7 6l5 5V8c2.76 0 5 2.24 5 5 0 1.3-.5 2.48-1.35 3.35l1.45 1.45A7.952 7.952 0 0 0 20 13c0-2.21-.9-4.21-2.35-5.65zM6.35 17.65A7.95 7.95 0 0 0 12 20v3l5-5-5-5v3c-2.76 0-5-2.24-5-5 0-1.3.5-2.48 1.35-3.35L6.9 6.9A7.952 7.952 0 0 0 4 11c0 2.21.9 4.21 2.35 5.65z"/>
+    </svg>
+  </button>
+  <div class="settings-panel" id="settings-panel">
+    <label>公积金比例（单位/个人，%）：</label>
+    <input type="number" id="param_gjj_rate" value="12">
+    <label>公积金基数下限：</label>
+    <input type="number" id="param_gjj_base_min" value="7460">
+    <label>公积金基数上限：</label>
+    <input type="number" id="param_gjj_base_max" value="37302">
+    <label>社保个人比例（%）：</label>
+    <input type="number" id="param_social_rate" value="10.5">
+    <label>社保基数下限：</label>
+    <input type="number" id="param_base_min" value="7460">
+    <label>社保基数上限：</label>
+    <input type="number" id="param_base_max" value="37302">
+  </div>
+
+  <div class="tabs">
+    <div class="tab active" data-tool="gjj">🏠 公积金</div>
+    <div class="tab" data-tool="tax">💰 个税</div>
+    <div class="tab" data-tool="ylj">👴 养老金</div>
+  </div>
+  
+  <div id="tool-panels">
+    <!-- 公积金 Tab -->
+    <div id="tool-gjj" class="tool-tab active"></div>
+    <!-- 个税 Tab -->
+    <div id="tool-tax" class="tool-tab hide"></div>
+    <!-- 养老金 Tab -->
+    <div id="tool-ylj" class="tool-tab hide"></div>
+  </div>
+</div>
+<script>
+// 全局——数据读写
+const GlobalStore = {
+  save() {
+    let data = {};
+    document.querySelectorAll('input,select').forEach(el => data[el.id] = el.value);
+    localStorage.setItem('financeData', JSON.stringify(data));
+  },
+  load() {
+    let data = localStorage.getItem('financeData');
+    if (data) {
+      try {
+        data = JSON.parse(data);
+        for (let id in data) {
+          let el = document.getElementById(id);
+          if (el) el.value = data[id];
+        }
+      } catch (e) {}
+    }
+  }
+};
+
+// 清除功能
+document.getElementById('clear-data').onclick = () => {
+  if (confirm('确定要恢复默认值并清空所有保存的数据吗？')) {
+    localStorage.removeItem('financeData');
+    location.reload();
+  }
+};
+
+// 设置开关
+document.getElementById('toggle-settings').onclick = (ev) => {
+  let sp = document.getElementById('settings-panel');
+  sp.style.display = sp.style.display == 'block' ? 'none' : 'block';
+  ev.target.innerText = sp.style.display == 'block' ? '关闭参数设置' : '打开参数设置';
+};
+
+// tab切换功能
+document.querySelectorAll('.tab').forEach(tab => {
+  tab.onclick = () => {
+    document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
+    document.querySelectorAll('.tool-tab').forEach(p => p.classList.add('hide'));
+    tab.classList.add('active');
+    document.getElementById('tool-' + tab.dataset.tool).classList.remove('hide');
+    // 激活当前tab模块
+    Modules[tab.dataset.tool] && Modules[tab.dataset.tool].activate();
+  }
+});
+
+/** 公积金模块 **/
+const GJJPanel = {
+  tpl: `
+    <h3>上海住房公积金累计计算 <span class="tip">(年利率 1.5%)</span></h3>
+    <label>月工资（元）：</label>
+    <input type="number" id="gjj_salary" placeholder="留空用全局工资" step="50">
+    <label>月缴纳额（元）：</label>
+    <input type="number" id="gjj_month_amt">
+    <label>缴纳年数：</label>
+    <input type="number" id="gjj_years" value="1">
+    <label>当前余额（元）：</label>
+    <input type="number" id="gjj_balance" value="0">
+    <div class="result" id="gjj_result"></div>
+  `,
+  panel: document.getElementById('tool-gjj'),
+  getInput(id) {
+    // 返回值，如果为空或者<=0则用全局工资
+    let el = document.getElementById(id);
+    let val = el ? parseFloat(el.value) : NaN;
+    if (isNaN(val) || val <= 0) {
+      val = parseFloat(document.getElementById('global_salary').value);
+    }
+    return isNaN(val) ? 0 : val;
+  },
+  bindEvents() {
+    // 只绑定本模块的所有 input/select 并响应
+    this.panel.querySelectorAll('input,select').forEach(el => {
+      el.oninput = el.onchange = () => {
+        if (el.id === 'gjj_month_amt') el.dataset.manual = true;
+        GJJPanel.compute();
+        GlobalStore.save();
+      };
+    });
+  },
+  activate() {
+    // 每次激活时重新计算和绑定事件
+    this.compute();
+    this.bindEvents();
+  },
+  compute() {
+    let s = this.getInput('gjj_salary');
+    let rate = +document.getElementById('param_gjj_rate').value / 100;
+    let gjjBaseMin = +document.getElementById('param_gjj_base_min').value;
+    let gjjBaseMax = +document.getElementById('param_gjj_base_max').value;
+    let base = Math.max(gjjBaseMin, Math.min(s, gjjBaseMax));
+    let mInput = document.getElementById('gjj_month_amt');
+    if (!mInput.dataset.manual) {
+      mInput.value = (base * rate * 2).toFixed(2);
+    }
+    let m = parseFloat(mInput.value) || 0;
+    let y = +document.getElementById('gjj_years').value;
+    let b = +document.getElementById('gjj_balance').value;
+    let r = 0.015;
+    let total = b * Math.pow(1 + r, y) + m * 12 * (Math.pow(1 + r, y) - 1) / r;
+    let paid = m * y * 12;
+    let interest = total - (b + paid);
+    document.getElementById('gjj_result').innerHTML = `
+      最终累计：<span class="sum">${total.toFixed(2)}</span> 元<br>
+      期间缴纳：${paid.toFixed(2)} 元，利息：${interest.toFixed(2)} 元
+    `;
+  },
+  render() { this.panel.innerHTML = this.tpl; }
+};
+
+/** 个税模块 **/
+const TaxPanel = {
+  tpl: `
+    <h3>上海工资个税计算器 <span class="tip">2025</span></h3>
+    <label>月工资（税前，元）</label>
+    <input type="number" id="tax_salary" placeholder="留空用全局工资" step="50">
+    <label>五险一金（元）</label>
+    <input type="number" id="tax_insurance">
+    <div class="tip">基数范围及比例来自参数设置</div>
+    <label>月专项附加扣除（元）</label>
+    <input type="number" id="tax_special" value="1000" step="1000">
+    <label>年终奖系数（倍月工资）</label>
+    <input type="number" id="tax_bonus_coef" value="4">
+    <label>年终奖计税方式</label>
+    <select id="tax_bonus_mode">
+      <option value="alone">单独计税</option>
+      <option value="merge">并入工资</option>
+    </select>
+    <div class="result" id="tax_result"></div>
+  `,
+  panel: document.getElementById('tool-tax'),
+  monthTable: [
+    { up: 3000, rate: 0.03, quick: 0 },
+    { up: 12000, rate: 0.1, quick: 210 },
+    { up: 25000, rate: 0.2, quick: 1410 },
+    { up: 35000, rate: 0.25, quick: 2660 },
+    { up: 55000, rate: 0.3, quick: 4410 },
+    { up: 80000, rate: 0.35, quick: 7160 },
+    { up: Infinity, rate: 0.45, quick: 15160 }
+  ],
+  yearTable: [
+    { up: 36000, rate: 0.03, quick: 0 },
+    { up: 144000, rate: 0.1, quick: 2520 },
+    { up: 300000, rate: 0.2, quick: 16920 },
+    { up: 420000, rate: 0.25, quick: 31920 },
+    { up: 660000, rate: 0.3, quick: 52920 },
+    { up: 960000, rate: 0.35, quick: 85920 },
+    { up: Infinity, rate: 0.45, quick: 181920 }
+  ],
+  getInput(id) {
+    let el = document.getElementById(id);
+    let val = el ? parseFloat(el.value) : NaN;
+    if (isNaN(val) || val <= 0) {
+      val = parseFloat(document.getElementById('global_salary').value);
+    }
+    return isNaN(val) ? 0 : val;
+  },
+  bindEvents() {
+    this.panel.querySelectorAll('input,select').forEach(el => {
+      el.oninput = el.onchange = () => {
+        if (el.id === 'tax_salary') TaxPanel.autoInsurance();
+        TaxPanel.compute();
+        GlobalStore.save();
+      };
+    });
+  },
+  activate() {
+    this.autoInsurance();
+    this.compute();
+    this.bindEvents();
+  },
+  getTaxTable(t, tb) {
+    for (let b of tb) if (t <= b.up) return b;
+  },
+  autoInsurance() {
+    const minBase = +document.getElementById('param_base_min').value;
+    const maxBase = +document.getElementById('param_base_max').value;
+    const socialRate = +document.getElementById('param_social_rate').value / 100;
+    const gjjRate = +document.getElementById('param_gjj_rate').value / 100;
+    const gjjBaseMin = +document.getElementById('param_gjj_base_min').value;
+    const gjjBaseMax = +document.getElementById('param_gjj_base_max').value;
+
+    let s = this.getInput('tax_salary');
+    let socialBase = Math.max(minBase, Math.min(s, maxBase));
+    let gjjBase = Math.max(gjjBaseMin, Math.min(s, gjjBaseMax));
+
+    let social = socialBase * socialRate;
+    let house = gjjBase * gjjRate;
+    document.getElementById('tax_insurance').value = (social + house).toFixed(2);
+  },
+  calcMonthTax(s, ins, special) {
+    let base = s - ins - special - 5000;
+    if (base <= 0) return 0;
+    let t = this.getTaxTable(base, this.monthTable);
+    return base * t.rate - t.quick;
+  },
+  calcBonusTax(bonus) {
+    if (bonus <= 0) return 0;
+    let avg = bonus / 12;
+    let t = this.getTaxTable(avg, this.monthTable);
+    return bonus * t.rate - t.quick;
+  },
+  calcMergeTax(s, ins, special, bonus) {
+    let total_income = s*12 + bonus;
+    let total_deduct = (ins + special + 5000)*12;
+    let taxable = total_income - total_deduct;
+    if (taxable <= 0) return 0;
+    let t = this.getTaxTable(taxable, this.yearTable);
+    return taxable * t.rate - t.quick;
+  },
+  compute() {
+    let s = this.getInput('tax_salary');
+    let ins = parseFloat(document.getElementById('tax_insurance').value) || 0;
+    let special = +document.getElementById('tax_special').value;
+    let coef = +document.getElementById('tax_bonus_coef').value;
+    let bonus = s * coef;
+    let mode = document.getElementById('tax_bonus_mode').value;
+
+    let monthTax = this.calcMonthTax(s, ins, special);
+    let afterMonth = s - ins - monthTax;
+    let bonusTax = 0;
+    if (bonus > 0) {
+      if (mode === 'alone') bonusTax = this.calcBonusTax(bonus);
+      else bonusTax = this.calcMergeTax(s, ins, special, bonus) - this.calcMergeTax(s, ins, special, 0);
+    }
+    let afterBonus = bonus - bonusTax;
+    document.getElementById('tax_result').innerHTML = `
+      月到手：<span class="sum">${afterMonth.toFixed(2)}</span> 元<br>
+      年终奖（${coef}倍）：${bonus.toFixed(2)} 元，到手：<span class="sum">${afterBonus.toFixed(2)}</span> 元<br>
+      全年总到手：<span class="sum">${(afterMonth*12+afterBonus).toFixed(2)}</span> 元
+    `;
+  },
+  render() { this.panel.innerHTML = this.tpl; }
+};
+
+/** 养老金模块 **/
+const YLJPanel = {
+  tpl: `
+    <h3>上海养老金预估 <span class="tip">精确到月</span></h3>
+    <label>月工资（元）：</label>
+    <input type="number" id="ylj_salary" placeholder="留空用全局工资" step="50">
+    <div class="row">
+      <div style="flex:1">
+        <label>已缴费年数：</label>
+        <input type="number" id="ylj_years_paid" value="0">
+      </div>
+      <div style="flex:1">
+        <label>已缴费月数：</label>
+        <input type="number" id="ylj_months_paid" value="0">
+      </div>
+    </div>
+    <label>计划总缴费年限（年）：</label>
+    <input type="number" id="ylj_plan" value="20">
+    <label>当前个人账户余额（元）：</label>
+    <input type="number" id="ylj_paid" value="85000">
+    <label>本人缴费指数：</label>
+    <input type="number" id="ylj_index" value="1.2" step="0.01">
+    <label>退休年龄</label>
+    <select id="ylj_age">
+      <option value="60">60岁（男）</option>
+      <option value="55">55岁（女干部）</option>
+      <option value="50">50岁（女工人）</option>
+    </select>
+    <label>上年社平工资（元）</label>
+    <input type="number" id="ylj_avg" value="12434">
+    <div class="result" id="ylj_result"></div>
+    <span class="toggle-link" id="ylj_details_toggle">展开计算明细 ▼</span>
+    <div class="details" id="ylj_details"></div>
+  `,
+  panel: document.getElementById('tool-ylj'),
+  monthMap: { "50": 195, "55": 170, "60": 139 },
+  getInput(id) {
+    let el = document.getElementById(id);
+    let val = el ? parseFloat(el.value) : NaN;
+    if (isNaN(val) || val <= 0) {
+      val = parseFloat(document.getElementById('global_salary').value);
+    }
+    return isNaN(val) ? 0 : val;
+  },
+  bindEvents() {
+    this.panel.querySelectorAll('input,select').forEach(el => {
+      el.oninput = el.onchange = () => {
+        // 指数手动标记
+        if (el.id === 'ylj_index') el.dataset.manual = true;
+        YLJPanel.compute();
+        GlobalStore.save();
+      };
+    });
+    document.getElementById('ylj_details_toggle').onclick = () => {
+      let d = document.getElementById('ylj_details');
+      let link = document.getElementById('ylj_details_toggle');
+      if (d.style.display === 'none' || d.style.display === '') {
+        d.style.display = 'block'; link.innerText = '收起计算明细 ▲';
+      } else {
+        d.style.display = 'none'; link.innerText = '展开计算明细 ▼';
+      }
+    };
+  },
+  activate() {
+    this.compute();
+    this.bindEvents();
+  },
+  compute() {
+    let s = this.getInput('ylj_salary');
+    let avg = +document.getElementById('ylj_avg').value;
+    let indexInput = document.getElementById('ylj_index');
+    if (!indexInput.dataset.manual) indexInput.value = avg > 0 ? (s / avg).toFixed(2) : '';
+    let index = parseFloat(indexInput.value) || 0;
+    let yearsPaid = +document.getElementById('ylj_years_paid').value;
+    let monthsPaid = +document.getElementById('ylj_months_paid').value;
+    let planYears = +document.getElementById('ylj_plan').value;
+    let currentBalance = +document.getElementById('ylj_paid').value || 0;
+    let salary = index * avg;
+    let paidYearsTotal = yearsPaid + monthsPaid / 12;
+    let futureYears = planYears - paidYearsTotal;
+    if (futureYears < 0) futureYears = 0;
+    let futureAmount = futureYears * 12 * salary * 0.08;
+    let totalAccount = currentBalance + futureAmount;
+    let baseRate = yearsPaid * 0.01 + monthsPaid * 0.00083;
+    let basePension = ((avg + salary) / 2) * baseRate;
+    let age = document.getElementById('ylj_age').value;
+    let personalPension = totalAccount / YLJPanel.monthMap[age];
+    let totalPension = basePension + personalPension;
+    document.getElementById('ylj_result').innerHTML = `
+      预估养老金（月）：<span class="sum">${totalPension.toFixed(2)}</span> 元<br>
+      基础养老金：${basePension.toFixed(2)} 元  个人账户养老金：${personalPension.toFixed(2)} 元<br>
+      未来缴费额：${futureAmount.toFixed(2)} 元  退休时个人账户总额：${totalAccount.toFixed(2)} 元`;
+    document.getElementById('ylj_details').innerHTML = `
+      <b>计算明细</b><br>
+      本人缴费基数：${salary.toFixed(2)} 元<br>
+      已缴费：${yearsPaid} 年 ${monthsPaid} 月<br>
+      未来缴费年限：${futureYears.toFixed(2)} 年<br>
+      基础养老金公式：((社平工资 ${avg} + 缴费基数 ${salary.toFixed(2)}) ÷ 2) × (${yearsPaid} × 1% + ${monthsPaid} × 0.083%) = ${basePension.toFixed(2)} 元<br>
+      个人账户养老金公式：退休时个人账户总额 ${totalAccount.toFixed(2)} ÷ 计发月数 ${YLJPanel.monthMap[age]} = ${personalPension.toFixed(2)} 元
+    `;
+    document.getElementById('ylj_details').style.display = 'none';
+  },
+  render() { this.panel.innerHTML = this.tpl; }
+};
+
+// 模块注册表
+const Modules = {
+  gjj: GJJPanel,
+  tax: TaxPanel,
+  ylj: YLJPanel
+};
+
+// --- 首次渲染 ---
+Object.values(Modules).forEach(m => m.render());
+GlobalStore.load();  // 数据恢复
+Modules.gjj.activate(); // 默认激活
+
+// 全局工资变动时全部重算（每个tab激活后都能自动联动）
+document.getElementById('global_salary').oninput = document.getElementById('global_salary').onchange = () => {
+  // 当前tab重新计算
+  let tab = document.querySelector('.tab.active').dataset.tool;
+  Modules[tab] && Modules[tab].activate();
+  GlobalStore.save();
+};
+
+// 参数设置项相关 input 变动时，全部重新刷新当前tab
+document.getElementById('settings-panel').querySelectorAll('input').forEach(input => {
+  input.oninput = input.onchange = () => {
+    let tab = document.querySelector('.tab.active').dataset.tool;
+    Modules[tab] && Modules[tab].activate();
+    GlobalStore.save();
+  };
+});
+</script>
+</body>
+</html>
