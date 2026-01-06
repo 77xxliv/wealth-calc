@@ -292,16 +292,19 @@ const TaxPanel = {
     let coef = +document.getElementById('tax_bonus_coef').value;
     let bonus = s * coef;
     let mode = document.getElementById('tax_bonus_mode').value;
-
+  
     let monthTax = this.calcMonthTax(s, ins, special);
     let afterMonth = s - ins - monthTax;
     let bonusTax = 0;
+  
     if (bonus > 0) {
       if (mode === 'alone') bonusTax = this.calcBonusTax(bonus);
       else bonusTax = this.calcMergeTax(s, ins, special, bonus) - this.calcMergeTax(s, ins, special, 0);
     }
     let afterBonus = bonus - bonusTax;
+  
     document.getElementById('tax_result').innerHTML = `
+      税前工资：<span class="sum">${s.toFixed(2)}</span> 元<br>
       月到手：<span class="sum">${afterMonth.toFixed(2)}</span> 元<br>
       年终奖（${coef}倍）：${bonus.toFixed(2)} 元，到手：<span class="sum">${afterBonus.toFixed(2)}</span> 元<br>
       全年总到手：<span class="sum">${(afterMonth*12+afterBonus).toFixed(2)}</span> 元
