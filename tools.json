@@ -6,14 +6,8 @@
         "description": "根据财务自由目标计算所需储蓄与投资回报"
     },
     {
-        "name": "MoneyCalc (综合财务计算器)",
-        "href": "MoneyCalc.html",
-        "version": "v1.0",
-        "description": "整合多种财务计算工具，快速获得结果"
-    },
-    {
         "name": "SalaryCalc (收入计算器)",
-        "href": "SalaryCalc/index.html", 
+        "href": "SalaryCalc.html", 
         "version": "v1.0",
         "description": "整合多种财务计算工具，快速获得结果"
     }
