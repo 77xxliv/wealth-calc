@@ -1,4 +1,3 @@
-
 <!DOCTYPE html>
 <html lang="zh">
 <head>
@@ -77,15 +76,20 @@
     const ul = document.getElementById('tools-list');
     ul.innerHTML = '';
     fetch('tools.json?' + Date.now())
-        .then(resp => resp.json())
+        .then(resp => {
+            if (resp.ok) return resp.json();
+            throw new Error('tools.json 加载失败');
+        })
         .then(tools => {
+            if (!Array.isArray(tools)) throw new Error('tools.json 格式不是数组！');
             tools.forEach(tool => {
+                // 容错：如果没写 version/description 也不报错
                 const li = document.createElement('li');
                 li.className = 'tool-item';
                 li.innerHTML = `
                     <div>
-                        <a class="tool-link" href="${tool.href}" target="_blank">${tool.name}</a>
-                        <span class="version">${tool.version}</span>
+                        <a class="tool-link" href="${tool.href || '#'}" target="_blank">${tool.name || '未命名工具'}</a>
+                        ${tool.version ? `<span class="version">${tool.version}</span>` : ''}
                         ${tool.description ? `<div class="desc">${tool.description}</div>` : ''}
                     </div>
                 `;
@@ -93,8 +97,8 @@
             });
         })
         .catch(err => {
-            ul.innerHTML = '<li style="color:#c10">加载 tools.json 失败</li>';
+            ul.innerHTML = `<li style="color:#c10">加载 tools.json 失败<br>${err.message}</li>`;
         });
-    <script type="module" src="main.js"></script>
+    </script>
 </body>
 </html>
